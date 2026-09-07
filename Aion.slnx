@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Aion.Simulation/Aion.Simulation.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Aion.Simulation.Tests/Aion.Simulation.Tests.csproj" />
+  </Folder>
+</Solution>
