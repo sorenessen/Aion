@@ -1,70 +1,107 @@
 using Aion.Simulation.Time;
+using Aion.Simulation.Worlds;
 
 namespace Aion.Simulation.Tests.Time;
 
 public class SimulationClockTests
 {
     [Fact]
-    public void Constructor_UsesInitialTime()
+    public void Constructor_StartsRunning()
     {
-        var clock = new SimulationClock(new SimulationTime(500));
+        var clock = new SimulationClock();
 
-        Assert.Equal(500, clock.CurrentTime.TotalSeconds);
         Assert.False(clock.IsPaused);
     }
 
     [Fact]
-    public void AdvanceBy_WhenRunning_AdvancesCurrentTime()
+    public void Tick_WhenRunning_ReturnsAdvancedWorld()
     {
-        var clock = new SimulationClock(SimulationTime.Zero);
+        var clock = new SimulationClock();
+        var world = new WorldState(
+            WorldId.New(),
+            new SimulationTime(100));
 
-        clock.AdvanceBy(60);
+        var result = clock.Tick(world, 60);
 
-        Assert.Equal(60, clock.CurrentTime.TotalSeconds);
+        Assert.Equal(160, result.CurrentTime.TotalSeconds);
+        Assert.Equal(100, world.CurrentTime.TotalSeconds);
+        Assert.Equal(world.Id, result.Id);
     }
 
     [Fact]
-    public void Pause_PreventsTimeFromAdvancing()
+    public void Tick_WhenPaused_DoesNotAdvanceWorld()
     {
-        var clock = new SimulationClock(SimulationTime.Zero);
+        var clock = new SimulationClock();
+        var world = new WorldState(
+            WorldId.New(),
+            new SimulationTime(100));
+
         clock.Pause();
 
-        clock.AdvanceBy(60);
+        var result = clock.Tick(world, 60);
 
         Assert.True(clock.IsPaused);
-        Assert.Equal(SimulationTime.Zero, clock.CurrentTime);
+        Assert.Same(world, result);
+        Assert.Equal(100, result.CurrentTime.TotalSeconds);
     }
 
     [Fact]
-    public void Resume_AllowsTimeToAdvanceAgain()
+    public void Resume_AllowsAutomaticAdvancementAgain()
     {
-        var clock = new SimulationClock(SimulationTime.Zero);
+        var clock = new SimulationClock();
+        var world = new WorldState(
+            WorldId.New(),
+            SimulationTime.Zero);
+
         clock.Pause();
-        clock.AdvanceBy(60);
+        var pausedResult = clock.Tick(world, 60);
 
         clock.Resume();
-        clock.AdvanceBy(60);
+        var resumedResult = clock.Tick(pausedResult, 60);
 
         Assert.False(clock.IsPaused);
-        Assert.Equal(60, clock.CurrentTime.TotalSeconds);
+        Assert.Equal(60, resumedResult.CurrentTime.TotalSeconds);
     }
 
     [Fact]
-    public void AdvanceBy_NegativeDuration_ThrowsWhenRunning()
+    public void Tick_NegativeDuration_ThrowsWhenRunning()
     {
-        var clock = new SimulationClock(SimulationTime.Zero);
+        var clock = new SimulationClock();
+        var world = new WorldState(
+            WorldId.New(),
+            SimulationTime.Zero);
 
         Assert.Throws<ArgumentOutOfRangeException>(
-            () => clock.AdvanceBy(-1));
+            () => clock.Tick(world, -1));
     }
 
     [Fact]
-    public void AdvanceBy_NegativeDuration_ThrowsWhenPaused()
+    public void Tick_NegativeDuration_ThrowsWhenPaused()
     {
-        var clock = new SimulationClock(SimulationTime.Zero);
+        var clock = new SimulationClock();
+        var world = new WorldState(
+            WorldId.New(),
+            SimulationTime.Zero);
+
         clock.Pause();
 
         Assert.Throws<ArgumentOutOfRangeException>(
-            () => clock.AdvanceBy(-1));
+            () => clock.Tick(world, -1));
+    }
+
+    [Fact]
+    public void ExplicitWorldAdvance_WorksWhileClockIsPaused()
+    {
+        var clock = new SimulationClock();
+        var world = new WorldState(
+            WorldId.New(),
+            new SimulationTime(100));
+
+        clock.Pause();
+
+        var result = world.AdvanceBy(60);
+
+        Assert.True(clock.IsPaused);
+        Assert.Equal(160, result.CurrentTime.TotalSeconds);
     }
 }

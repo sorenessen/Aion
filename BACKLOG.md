@@ -27,12 +27,12 @@ Build the smallest complete vertical foundation for Aion: one persistent planet,
 ### Architecture Foundation
 
 - [ ] Define simulation-domain boundaries
-- [ ] Define world identity model
-- [ ] Define immutable simulation-time representation
-- [ ] Define simulation clock
-- [ ] Define world state
+- [x] Define world identity model
+- [x] Define immutable simulation-time representation
+- [x] Define simulation clock
+- [x] Define world state
 - [ ] Define planet state
-- [ ] Define simulation step/tick contract
+- [x] Define simulation step/tick contract
 - [ ] Define event/history model
 - [ ] Define intervention model
 - [ ] Define provenance concept without overbuilding it
@@ -46,14 +46,14 @@ A world can exist and advance through simulation time without any user interface
 
 Acceptance criteria:
 
-- [ ] World has stable identity
-- [ ] World has current simulation time
-- [ ] Time can advance deterministically
-- [ ] Simulation speed is separate from simulation state
-- [ ] Clock can pause
-- [ ] Clock supports explicit advancement
-- [ ] Tests prove deterministic advancement
-- [ ] No rendering dependency exists in Aion.Simulation
+- [x] World has stable identity
+- [x] World has current simulation time
+- [x] Time can advance deterministically
+- [x] Simulation speed is separate from simulation state
+- [x] Clock can pause
+- [x] Clock supports explicit advancement
+- [x] Tests prove deterministic advancement
+- [x] No rendering dependency exists in Aion.Simulation
 
 ## Phase 2 - First Planet
 

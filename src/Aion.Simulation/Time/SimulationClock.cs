@@ -1,14 +1,9 @@
+using Aion.Simulation.Worlds;
+
 namespace Aion.Simulation.Time;
 
 public sealed class SimulationClock
 {
-    public SimulationClock(SimulationTime initialTime)
-    {
-        CurrentTime = initialTime;
-    }
-
-    public SimulationTime CurrentTime { get; private set; }
-
     public bool IsPaused { get; private set; }
 
     public void Pause()
@@ -21,8 +16,10 @@ public sealed class SimulationClock
         IsPaused = false;
     }
 
-    public void AdvanceBy(long seconds)
+    public WorldState Tick(WorldState world, long seconds)
     {
+        ArgumentNullException.ThrowIfNull(world);
+
         if (seconds < 0)
         {
             throw new ArgumentOutOfRangeException(
@@ -32,9 +29,9 @@ public sealed class SimulationClock
 
         if (IsPaused)
         {
-            return;
+            return world;
         }
 
-        CurrentTime = CurrentTime.AdvanceBy(seconds);
+        return world.AdvanceBy(seconds);
     }
 }
