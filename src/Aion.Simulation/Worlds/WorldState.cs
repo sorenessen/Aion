@@ -62,6 +62,22 @@ public sealed record WorldState
         };
     }
 
+    public WorldState Copy()
+    {
+        return new WorldState(
+            Id,
+            CurrentTime,
+            Planets);
+    }
+
+    public WorldState Fork()
+    {
+        return new WorldState(
+            WorldId.New(),
+            CurrentTime,
+            Planets);
+    }
+
     public WorldState AddPlanet(PlanetState planet)
     {
         ArgumentNullException.ThrowIfNull(planet);

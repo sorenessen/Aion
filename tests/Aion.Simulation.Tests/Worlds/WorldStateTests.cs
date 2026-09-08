@@ -149,6 +149,88 @@ public class WorldStateTests
             () => world.ReplacePlanet(otherPlanet));
     }
 
+    [Fact]
+    public void Copy_ReturnsDistinctWorldWithSameIdentityAndState()
+    {
+        var planet = CreateEarth();
+
+        var world = new WorldState(
+            WorldId.New(),
+            new SimulationTime(500),
+            [planet]);
+
+        var copy = world.Copy();
+
+        Assert.NotSame(world, copy);
+        Assert.Equal(world.Id, copy.Id);
+        Assert.Equal(world.CurrentTime, copy.CurrentTime);
+
+        var copiedPlanet = Assert.Single(copy.Planets);
+
+        Assert.Same(planet, copiedPlanet);
+        Assert.Equal(planet.Id, copiedPlanet.Id);
+    }
+
+    [Fact]
+    public void Fork_ReturnsWorldWithNewIdentityAndPreservedStartingState()
+    {
+        var planet = CreateEarth();
+
+        var world = new WorldState(
+            WorldId.New(),
+            new SimulationTime(500),
+            [planet]);
+
+        var fork = world.Fork();
+
+        Assert.NotSame(world, fork);
+        Assert.NotEqual(world.Id, fork.Id);
+        Assert.Equal(world.CurrentTime, fork.CurrentTime);
+
+        var forkedPlanet = Assert.Single(fork.Planets);
+
+        Assert.Same(planet, forkedPlanet);
+        Assert.Equal(planet.Id, forkedPlanet.Id);
+    }
+
+    [Fact]
+    public void Fork_CanDivergeWithoutChangingSourceWorld()
+    {
+        var planet = CreateEarth();
+
+        var world = new WorldState(
+            WorldId.New(),
+            SimulationTime.Zero,
+            [planet]);
+
+        var fork = world.Fork();
+
+        var changedPlanet = new PlanetState(
+            planet.Id,
+            planet.Name,
+            planet.MassKilograms,
+            planet.MeanRadiusMeters,
+            new PlanetEnvironment(
+                300,
+                planet.Environment.SurfaceWaterFraction,
+                planet.Environment.IceCoverageFraction,
+                planet.Environment.Atmosphere));
+
+        var changedFork = fork
+            .ReplacePlanet(changedPlanet)
+            .AdvanceBy(100);
+
+        Assert.Equal(
+            288.15,
+            world.Planets[0].Environment.MeanSurfaceTemperatureKelvin);
+        Assert.Equal(0, world.CurrentTime.TotalSeconds);
+
+        Assert.Equal(
+            300,
+            changedFork.Planets[0].Environment.MeanSurfaceTemperatureKelvin);
+        Assert.Equal(100, changedFork.CurrentTime.TotalSeconds);
+    }
+
     private static PlanetState CreateEarth()
     {
         return new PlanetState(

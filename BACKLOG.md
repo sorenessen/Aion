@@ -82,7 +82,12 @@ Acceptance criteria:
   - [x] Verify basic round trip and invalid-domain rejection
   - [x] Complete malformed-snapshot and multi-planet coverage
   - [x] Establish serialization checkpoint
-- [ ] Planet state can be cloned or forked safely
+- [x] Planet state can be cloned or forked safely
+  - [x] Copy preserves world identity and state
+  - [x] Simple fork creates a new world identity
+  - [x] Fork preserves planet identities and starting state
+  - [x] Immutable operations allow independent divergence
+  - [ ] Historical timeline branching remains Phase 4
 - [ ] Planet state changes only through defined simulation operations
 
 ## Phase 3 - First Causal System
