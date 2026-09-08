@@ -31,7 +31,7 @@ public sealed class PlanetaryEnergyBalanceSystem
         _parameters = parameters;
     }
 
-    public ISimulationOperation Evaluate(
+    public SimulationChange Evaluate(
         WorldState world,
         long elapsedSeconds)
     {
@@ -115,9 +115,31 @@ public sealed class PlanetaryEnergyBalanceSystem
                 newIceCoverage,
                 environment.Atmosphere);
 
-        return new ReplacePlanetEnvironmentOperation(
+        return new SimulationChange(
+            new ReplacePlanetEnvironmentOperation(
+                planet.Id,
+                newEnvironment),
+            "planetary-energy-balance",
+            "Radiative energy imbalance changed planetary temperature and ice coverage.",
             planet.Id,
-            newEnvironment);
+            elapsedSeconds,
+            new Dictionary<string, double>
+            {
+                ["absorbedSolarFluxWattsPerSquareMeter"] =
+                    absorbedSolarFlux,
+                ["outgoingLongwaveFluxWattsPerSquareMeter"] =
+                    outgoingLongwaveFlux,
+                ["netRadiativeFluxWattsPerSquareMeter"] =
+                    netFlux,
+                ["previousTemperatureKelvin"] =
+                    environment.MeanSurfaceTemperatureKelvin,
+                ["newTemperatureKelvin"] =
+                    newTemperature,
+                ["previousIceCoverageFraction"] =
+                    environment.IceCoverageFraction,
+                ["newIceCoverageFraction"] =
+                    newIceCoverage
+            });
     }
 
     private double CalculateAlbedo(

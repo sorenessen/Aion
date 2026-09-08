@@ -5,7 +5,7 @@ namespace Aion.Simulation.Causality;
 
 public static class SimulationStepRunner
 {
-    public static WorldState Step(
+    public static SimulationStepResult Step(
         WorldState world,
         long elapsedSeconds,
         ICausalSystem system)
@@ -20,23 +20,28 @@ public static class SimulationStepRunner
                 "Simulation step duration cannot be negative.");
         }
 
-        var operation = system.Evaluate(
+        var change = system.Evaluate(
             world,
             elapsedSeconds);
 
-        if (operation is null)
+        if (change is null)
         {
             throw new InvalidOperationException(
-                "A causal system must return a simulation operation.");
+                "A causal system must return a simulation change.");
         }
 
         var changedWorld =
             SimulationOperationExecutor.Apply(
                 world,
-                operation);
+                change.Operation);
 
-        return SimulationOperationExecutor.Apply(
-            changedWorld,
-            new AdvanceTimeOperation(elapsedSeconds));
+        var advancedWorld =
+            SimulationOperationExecutor.Apply(
+                changedWorld,
+                new AdvanceTimeOperation(elapsedSeconds));
+
+        return new SimulationStepResult(
+            advancedWorld,
+            change);
     }
 }

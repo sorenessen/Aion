@@ -36,11 +36,15 @@ public class SimulationStepRunnerTests
 
         Assert.Equal(
             160,
-            result.CurrentTime.TotalSeconds);
+            result.World.CurrentTime.TotalSeconds);
 
         Assert.Same(
             replacementEnvironment,
-            result.Planets[0].Environment);
+            result.World.Planets[0].Environment);
+
+        Assert.Equal(
+            "test-environment-change",
+            result.Change.Cause);
     }
 
     [Fact]
@@ -78,7 +82,7 @@ public class SimulationStepRunnerTests
 
         Assert.Equal(
             300,
-            result.Planets[0]
+            result.World.Planets[0]
                 .Environment
                 .MeanSurfaceTemperatureKelvin);
     }
@@ -139,29 +143,39 @@ public class SimulationStepRunnerTests
             _environment = environment;
         }
 
-        public ISimulationOperation Evaluate(
+        public SimulationChange Evaluate(
             WorldState world,
             long elapsedSeconds)
         {
-            return new ReplacePlanetEnvironmentOperation(
+            return new SimulationChange(
+                new ReplacePlanetEnvironmentOperation(
+                    _planetId,
+                    _environment),
+                "test-environment-change",
+                "Test environment replacement.",
                 _planetId,
-                _environment);
+                elapsedSeconds);
         }
     }
 
     private sealed class NoOpSystem : ICausalSystem
     {
-        public ISimulationOperation Evaluate(
+        public SimulationChange Evaluate(
             WorldState world,
             long elapsedSeconds)
         {
-            return new AdvanceTimeOperation(0);
+            return new SimulationChange(
+                new AdvanceTimeOperation(0),
+                "test-no-op",
+                "Test no-op.",
+                null,
+                elapsedSeconds);
         }
     }
 
     private sealed class InvalidSystem : ICausalSystem
     {
-        public ISimulationOperation Evaluate(
+        public SimulationChange Evaluate(
             WorldState world,
             long elapsedSeconds)
         {

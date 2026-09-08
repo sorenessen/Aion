@@ -30,15 +30,29 @@ public class PlanetaryEnergyBalanceSystemTests
             planet.Id,
             EquilibriumStellarFlux());
 
-        var first = Assert.IsType<ReplacePlanetEnvironmentOperation>(
-            system.Evaluate(world, 86_400));
+        var first = system.Evaluate(
+            world,
+            86_400);
 
-        var second = Assert.IsType<ReplacePlanetEnvironmentOperation>(
-            system.Evaluate(world, 86_400));
+        var second = system.Evaluate(
+            world,
+            86_400);
+
+        var firstOperation =
+            Assert.IsType<ReplacePlanetEnvironmentOperation>(
+                first.Operation);
+
+        var secondOperation =
+            Assert.IsType<ReplacePlanetEnvironmentOperation>(
+                second.Operation);
 
         Assert.Equal(
-            first.Environment,
-            second.Environment);
+            firstOperation.Environment,
+            secondOperation.Environment);
+
+        Assert.Equal(
+            first.Metrics,
+            second.Metrics);
     }
 
     [Fact]
@@ -61,14 +75,14 @@ public class PlanetaryEnergyBalanceSystemTests
 
         Assert.Equal(
             InitialTemperature,
-            result.Planets[0]
+            result.World.Planets[0]
                 .Environment
                 .MeanSurfaceTemperatureKelvin,
             10);
 
         Assert.Equal(
             0,
-            result.Planets[0]
+            result.World.Planets[0]
                 .Environment
                 .IceCoverageFraction,
             10);
@@ -93,7 +107,7 @@ public class PlanetaryEnergyBalanceSystemTests
             system);
 
         Assert.True(
-            result.Planets[0]
+            result.World.Planets[0]
                 .Environment
                 .MeanSurfaceTemperatureKelvin
             > InitialTemperature);
@@ -118,7 +132,7 @@ public class PlanetaryEnergyBalanceSystemTests
             system);
 
         Assert.True(
-            result.Planets[0]
+            result.World.Planets[0]
                 .Environment
                 .MeanSurfaceTemperatureKelvin
             < InitialTemperature);
@@ -143,7 +157,7 @@ public class PlanetaryEnergyBalanceSystemTests
             system);
 
         Assert.True(
-            result.Planets[0]
+            result.World.Planets[0]
                 .Environment
                 .IceCoverageFraction
             < 0.50);
@@ -168,7 +182,7 @@ public class PlanetaryEnergyBalanceSystemTests
             system);
 
         Assert.True(
-            result.Planets[0]
+            result.World.Planets[0]
                 .Environment
                 .IceCoverageFraction
             > 0.50);

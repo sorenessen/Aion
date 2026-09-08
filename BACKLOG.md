@@ -143,13 +143,13 @@ Goal:
 
 A world can leave memory and return unchanged.
 
-- [ ] Save world
-- [ ] Load world
-- [ ] Version serialized state
-- [ ] Detect incompatible or corrupt state
-- [ ] Round-trip tests
-- [ ] Preserve timeline and history
-- [ ] Preserve provenance metadata
+- [x] Save world
+- [x] Load world
+- [x] Version serialized state
+- [x] Detect incompatible or corrupt state
+- [x] Round-trip tests
+- [x] Preserve timeline and history
+- [x] Preserve provenance metadata
 
 ## Phase 6 - Aion API
 
