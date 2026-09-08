@@ -31,6 +31,13 @@ public class WorldStateTests
     }
 
     [Fact]
+    public void Constructor_RejectsEmptyWorldIdentity()
+    {
+        Assert.Throws<ArgumentException>(
+            () => new WorldState(default, SimulationTime.Zero));
+    }
+
+    [Fact]
     public void AdvanceBy_NegativeDuration_Throws()
     {
         var world = new WorldState(
