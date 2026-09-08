@@ -152,3 +152,19 @@ We will not build multiplayer before a persistent world is worth sharing.
 First goal:
 
 Create a planet. Make time move. Make the planet change. Make those changes understandable.
+
+## Software Architecture Credo
+
+Aion's implementation should remain simple, readable, maintainable, and adaptable as its functional demands grow.
+
+- Apply KISS and DRY. Prefer the smallest clear implementation that meets current requirements without unnecessarily constraining future capabilities.
+- Keep ownership and dependencies explicit. Favor independently understandable, composable components and directional dependencies where practical.
+- Model necessary interdependence without creating unnecessary code-level entanglement. Avoid circular dependencies, shared mutable state, concrete implementation leakage, and god objects.
+- Preserve practical escape hatches. Components should be replaceable, bypassable, degradable, migrated, or redesigned when requirements, dependencies, scientific models, or technologies change.
+- Keep the authoritative simulation independent of presentation, persistence, hosting, and vendor-specific infrastructure wherever practical.
+- Avoid unnecessary assumptions about operating systems, deployment environments, geographic regions, languages, calendars, units, or world representations in the core.
+- Introduce abstractions when they establish a useful boundary, not merely because a hypothetical future implementation might exist.
+- Revisit foundational ownership and architecture when incremental patches would materially compromise performance, reliability, maintainability, capability, or future flexibility.
+- At milestone reviews, explicitly ask: What are we becoming accidentally dependent on? What should we keep, simplify, replace, defer, or abandon?
+
+Future-proofing means preserving useful options, not implementing every possible future today.
