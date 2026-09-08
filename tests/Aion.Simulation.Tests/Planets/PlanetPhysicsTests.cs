@@ -39,7 +39,8 @@ public class PlanetPhysicsTests
             PlanetId.New(),
             "Earth",
             5.9722e24,
-            6_371_000);
+            6_371_000,
+            new PlanetEnvironment(288.15, 0.71, 0.03));
 
         Assert.InRange(
             planet.SurfaceGravityMetersPerSecondSquared,

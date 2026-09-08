@@ -9,16 +9,23 @@ public class PlanetStateTests
     {
         var id = PlanetId.New();
 
+        var environment = new PlanetEnvironment(
+            288.15,
+            0.71,
+            0.03);
+
         var planet = new PlanetState(
             id,
             "Earth",
             5.9722e24,
-            6_371_000);
+            6_371_000,
+            environment);
 
         Assert.Equal(id, planet.Id);
         Assert.Equal("Earth", planet.Name);
         Assert.Equal(5.9722e24, planet.MassKilograms);
         Assert.Equal(6_371_000, planet.MeanRadiusMeters);
+        Assert.Equal(environment, planet.Environment);
     }
 
     [Fact]
@@ -29,7 +36,8 @@ public class PlanetStateTests
                 default,
                 "Earth",
                 5.9722e24,
-                6_371_000));
+                6_371_000,
+                new PlanetEnvironment(288.15, 0.71, 0.03)));
     }
 
     [Theory]
@@ -42,7 +50,8 @@ public class PlanetStateTests
                 PlanetId.New(),
                 name,
                 5.9722e24,
-                6_371_000));
+                6_371_000,
+                new PlanetEnvironment(288.15, 0.71, 0.03)));
     }
 
     [Theory]
@@ -57,7 +66,8 @@ public class PlanetStateTests
                 PlanetId.New(),
                 "Earth",
                 massKilograms,
-                6_371_000));
+                6_371_000,
+                new PlanetEnvironment(288.15, 0.71, 0.03)));
     }
 
     [Theory]
@@ -72,6 +82,19 @@ public class PlanetStateTests
                 PlanetId.New(),
                 "Earth",
                 5.9722e24,
-                meanRadiusMeters));
+                meanRadiusMeters,
+                new PlanetEnvironment(288.15, 0.71, 0.03)));
     }
+    [Fact]
+    public void Constructor_RejectsNullEnvironment()
+    {
+        Assert.Throws<ArgumentNullException>(
+            () => new PlanetState(
+                PlanetId.New(),
+                "Earth",
+                5.9722e24,
+                6_371_000,
+                null!));
+    }
+
 }

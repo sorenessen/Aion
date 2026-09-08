@@ -6,7 +6,8 @@ public sealed record PlanetState
         PlanetId id,
         string name,
         double massKilograms,
-        double meanRadiusMeters)
+        double meanRadiusMeters,
+        PlanetEnvironment environment)
     {
         if (id.Value == Guid.Empty)
         {
@@ -36,19 +37,24 @@ public sealed record PlanetState
                 "Planet mean radius must be a finite positive value.");
         }
 
+        ArgumentNullException.ThrowIfNull(environment);
+
         Id = id;
         Name = name;
         MassKilograms = massKilograms;
         MeanRadiusMeters = meanRadiusMeters;
+        Environment = environment;
     }
 
     public PlanetId Id { get; private init; }
 
-    public string Name { get; init; }
+    public string Name { get; private init; }
 
     public double MassKilograms { get; private init; }
 
     public double MeanRadiusMeters { get; private init; }
+
+    public PlanetEnvironment Environment { get; private init; }
 
     public double SurfaceGravityMetersPerSecondSquared =>
         PlanetPhysics.CalculateSurfaceGravity(
