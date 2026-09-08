@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-Aion begins with one planet, but its long-term product direction may eventually include multiple planets, star systems, and larger spatial hierarchies.
+Est begins with one planet, but its long-term product direction may eventually include multiple planets, star systems, and larger spatial hierarchies.
 
 The First Light milestone does not require those future systems. Modeling them now would introduce speculative infrastructure and assumptions before they are needed.
 
@@ -35,7 +35,7 @@ This is the smallest ownership model that supports the current one-planet milest
 
 It preserves room for future planetary expansion while avoiding speculative abstractions whose requirements are not yet known.
 
-The design follows Aion's architecture principle:
+The design follows Est's architecture principle:
 
 > Future possibility is a design constraint, not a requirement to build the future now.
 

@@ -1,4 +1,4 @@
-# Aion Backlog
+# Est Backlog
 
 ## Current Release
 
@@ -6,7 +6,7 @@
 
 Objective:
 
-Build the smallest complete vertical foundation for Aion: one persistent planet, a functioning simulation clock, one causal planetary system, and a browser-visible globe.
+Build the smallest complete vertical foundation for Est: one persistent planet, a functioning simulation clock, one causal planetary system, and a browser-visible globe.
 
 ## Phase 0 - Foundation
 
@@ -14,9 +14,9 @@ Build the smallest complete vertical foundation for Aion: one persistent planet,
 
 - [x] Initialize Git repository
 - [x] Pin .NET SDK 10.0.301
-- [x] Create Aion.slnx
-- [x] Create Aion.Simulation
-- [x] Create Aion.Simulation.Tests
+- [x] Create Est.slnx
+- [x] Create Est.Simulation
+- [x] Create Est.Simulation.Tests
 - [x] Add project references
 - [x] Verify clean test run
 - [x] Establish README
@@ -53,7 +53,7 @@ Acceptance criteria:
 - [x] Clock can pause
 - [x] Clock supports explicit advancement
 - [x] Tests prove deterministic advancement
-- [x] No rendering dependency exists in Aion.Simulation
+- [x] No rendering dependency exists in Est.Simulation
 
 ## Phase 2 - First Planet
 
@@ -81,7 +81,7 @@ Acceptance criteria:
 
 - [x] Planet can be created from explicit initial conditions
 - [x] Planet state is serializable
-  - [x] Add separate Aion.Persistence project
+  - [x] Add separate Est.Persistence project
   - [x] Implement versioned JSON snapshot DTOs
   - [x] Reconstruct through validating domain constructors
   - [x] Verify basic round trip and invalid-domain rejection
@@ -151,13 +151,13 @@ A world can leave memory and return unchanged.
 - [x] Preserve timeline and history
 - [x] Preserve provenance metadata
 
-## Phase 6 - Aion API
+## Phase 6 - Est API
 
 Goal:
 
 Expose simulation operations without coupling the engine to presentation.
 
-- [x] Create Aion.Api
+- [x] Create Est.Api
 - [x] World creation endpoint
 - [x] World-state endpoint
 - [x] Advance-time endpoint
@@ -174,13 +174,13 @@ intervention, and archive round trips are verified.
 
 Goal:
 
-See Aion.
+See Est.
 
 Candidate client:
 
 TypeScript web application with Babylon.js or another browser-native renderer selected after a focused technical spike.
 
-- [ ] Create Aion.Web
+- [ ] Create Est.Web
 - [ ] Render large 3D planet
 - [ ] Orbit camera
 - [ ] Zoom controls
@@ -214,7 +214,7 @@ The user changes one thing and sees understandable consequences.
 
 Earth Observatory is intended to grow into a broad real-world systems simulation, not a simulator of any single domain.
 
-Aion should eventually represent as much of the physical, biological, environmental, economic, social, technological, and geopolitical world as can be modeled responsibly with available evidence, established domain models, transparent assumptions, and explicit uncertainty.
+Est should eventually represent as much of the physical, biological, environmental, economic, social, technological, and geopolitical world as can be modeled responsibly with available evidence, established domain models, transparent assumptions, and explicit uncertainty.
 
 Candidate domains include, but are not limited to:
 
@@ -258,9 +258,9 @@ This breadth is a long-term design target, not a requirement to implement all do
 
 ## Living Worlds
 
-Living Worlds is the long-term game side of Aion.
+Living Worlds is the long-term game side of Est.
 
-Aion is not intended to prescribe one permanent game loop. The distant goal is a general simulation platform capable of supporting many different kinds of experiences within the same coherent world model.
+Est is not intended to prescribe one permanent game loop. The distant goal is a general simulation platform capable of supporting many different kinds of experiences within the same coherent world model.
 
 A player may eventually choose to observe, manage, influence, inhabit, or directly participate in the simulation at different scales. Possible experiences may include planetary stewardship, ecosystem management, civilization building, economics, markets, government, warfare, exploration, business, city building, family or individual life, scientific experimentation, alternate history, spaceflight, or other forms of play that emerge from the simulated systems.
 

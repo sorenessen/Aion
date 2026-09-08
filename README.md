@@ -1,8 +1,8 @@
-# Aion
+# Est
 
 A living planetary simulation.
 
-Aion is a simulation-first platform for modeling worlds as interconnected physical, environmental, biological, societal, and eventually individual systems that evolve through time.
+Est is a simulation-first platform for modeling worlds as interconnected physical, environmental, biological, societal, and eventually individual systems that evolve through time.
 
 The project begins with a single planet viewed from space and is designed to scale in resolution toward regions, settlements, communities, and individual agents, and eventually outward toward star systems and galaxies.
 
@@ -16,13 +16,13 @@ Earth Observatory may support future-facing scenario experiments, but observed r
 
 ### Living Worlds
 
-The game side of Aion.
+The game side of Est.
 
 Players create or fork worlds, alter conditions, advance time, influence civilizations, and eventually interact with governments, settlements, and individual simulated inhabitants.
 
 ## Current Milestone
 
-### Aion 0.1 - First Light
+### Est 0.1 - First Light
 
 Goal:
 
@@ -65,4 +65,4 @@ The simulation engine must remain independent of rendering.
 
 A world must be able to exist, advance, save, load, and be tested without any graphical client.
 
-Aion should preserve architectural escape hatches. Existing implementation decisions are not sacred if they begin to materially constrain performance, maintainability, reliability, scientific integrity, or future product possibilities.
+Est should preserve architectural escape hatches. Existing implementation decisions are not sacred if they begin to materially constrain performance, maintainability, reliability, scientific integrity, or future product possibilities.

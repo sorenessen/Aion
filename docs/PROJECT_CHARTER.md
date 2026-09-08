@@ -1,16 +1,16 @@
-# Aion Project Charter
+# Est Project Charter
 
 ## Vision
 
-Aion is a living planetary simulation.
+Est is a living planetary simulation.
 
-Aion models worlds as interconnected physical, environmental, biological, societal, and eventually individual systems that change through time.
+Est models worlds as interconnected physical, environmental, biological, societal, and eventually individual systems that change through time.
 
 The experience begins with a planet viewed from space. The user can observe its state, move through time, inspect causes and effects, and, in simulated worlds, intervene.
 
-Aion is designed to grow in resolution rather than simply grow in size.
+Est is designed to grow in resolution rather than simply grow in size.
 
-The long-term scale includes planets, regions, settlements, communities, and individual inhabitants. Much later, Aion may expand outward to star systems and galaxies.
+The long-term scale includes planets, regions, settlements, communities, and individual inhabitants. Much later, Est may expand outward to star systems and galaxies.
 
 The first implementation does not need those future scales, but foundational architecture should avoid preventing them.
 
@@ -22,7 +22,7 @@ Historical state should be derived from historical evidence and authoritative da
 
 Recorded reality must never silently become generated or simulated information.
 
-Aion should distinguish among:
+Est should distinguish among:
 
 - observed measurements
 - historical records
@@ -43,7 +43,7 @@ The long-term goal is to support thoughtful experiments about what Earth could p
 
 ## Living Worlds
 
-Living Worlds is Aion as a game.
+Living Worlds is Est as a game.
 
 Worlds may be procedurally generated or created from templates, including historical Earth states.
 
@@ -67,7 +67,7 @@ Observed, estimated, modeled, simulated, and generated information must remain d
 
 ## Time
 
-Time is a first-class component of Aion.
+Time is a first-class component of Est.
 
 Worlds have persistent chronology.
 
@@ -81,7 +81,7 @@ History is immutable. Futures branch.
 
 ## Simulation Scale
 
-Aion does not attempt to simulate every entity at maximum resolution simultaneously.
+Est does not attempt to simulate every entity at maximum resolution simultaneously.
 
 Simulation resolution changes with observational scale.
 
@@ -99,11 +99,11 @@ Earth Observatory is intended to become a broad simulation of real-world systems
 
 Its long-term scope may include physical, biological, environmental, economic, social, technological, and geopolitical systems wherever they can be represented responsibly.
 
-Aion should preserve the ability to model causal relationships across those domains, including effects involving resources, populations, economies, markets, commodities, trade, governments, technology, ecosystems, climate, and other measurable systems.
+Est should preserve the ability to model causal relationships across those domains, including effects involving resources, populations, economies, markets, commodities, trade, governments, technology, ecosystems, climate, and other measurable systems.
 
 Earth simulation should prefer established domain models, authoritative datasets, and transparent assumptions over invented equations.
 
-Aion should represent uncertainty, disagreement, missing knowledge, and model limitations explicitly rather than manufacture false precision.
+Est should represent uncertainty, disagreement, missing knowledge, and model limitations explicitly rather than manufacture false precision.
 
 Artificial intelligence is not the authority governing physical reality.
 
@@ -117,7 +117,7 @@ A world is a persistent data object independent of the device displaying it.
 
 Initially, worlds may run locally.
 
-Eventually, Aion may host worlds so users can sign in through a browser and continue observing or interacting with them from anywhere.
+Eventually, Est may host worlds so users can sign in through a browser and continue observing or interacting with them from anywhere.
 
 Worlds need not consume dedicated computing resources continuously. Checkpoints, elapsed simulation time, scheduled advancement, and event processing may be used to maintain persistent hosted worlds efficiently.
 
@@ -125,7 +125,7 @@ World owners may eventually allow others to observe, visit, or interact accordin
 
 ## General Simulation Platform
 
-Aion's long-term game vision is not limited to a single genre, scale, or prescribed game loop.
+Est's long-term game vision is not limited to a single genre, scale, or prescribed game loop.
 
 The distant goal is a coherent simulation platform capable of supporting many different kinds of experiences over shared authoritative world state.
 
@@ -133,13 +133,13 @@ A player may eventually observe, manage, influence, inhabit, or directly partici
 
 Gameplay should emerge from interoperating simulation systems wherever practical rather than from separate incompatible versions of reality for each mode of play.
 
-The user should ultimately be able to decide what kind of experience Aion becomes for them.
+The user should ultimately be able to decide what kind of experience Est becomes for them.
 
 This breadth is a design horizon. It does not override the requirement to earn complexity incrementally.
 
 ## First Principle
 
-Aion earns complexity.
+Est earns complexity.
 
 We will not build a galaxy before one planet is compelling.
 
@@ -155,7 +155,7 @@ Create a planet. Make time move. Make the planet change. Make those changes unde
 
 ## Software Architecture Credo
 
-Aion's implementation should remain simple, readable, maintainable, and adaptable as its functional demands grow.
+Est's implementation should remain simple, readable, maintainable, and adaptable as its functional demands grow.
 
 - Apply KISS and DRY. Prefer the smallest clear implementation that meets current requirements without unnecessarily constraining future capabilities.
 - Keep ownership and dependencies explicit. Favor independently understandable, composable components and directional dependencies where practical.

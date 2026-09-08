@@ -2,7 +2,7 @@
 
 ## Status
 
-Initial causal model for Aion Phase 3.
+Initial causal model for Est Phase 3.
 
 ## Purpose
 
