@@ -188,6 +188,37 @@ The user changes one thing and sees understandable consequences.
 
 ## Earth Observatory
 
+Earth Observatory is intended to grow into a broad real-world systems simulation, not a simulator of any single domain.
+
+Aion should eventually represent as much of the physical, biological, environmental, economic, social, technological, and geopolitical world as can be modeled responsibly with available evidence, established domain models, transparent assumptions, and explicit uncertainty.
+
+Candidate domains include, but are not limited to:
+
+- atmosphere, weather, and climate
+- oceans, hydrology, and cryosphere
+- geology and natural hazards
+- ecosystems and biodiversity
+- agriculture and food systems
+- natural resources and energy
+- populations and demographics
+- public health
+- migration
+- infrastructure and transportation
+- housing and land use
+- economies and macroeconomic indicators
+- markets, commodities, prices, and supply chains
+- finance, currencies, and trade
+- industries, firms, labor, and employment
+- governments, institutions, law, and public policy
+- international relations and conflict
+- science and technology
+- education and human development
+- culture and social change
+- disasters and major real-world events
+- interactions and causal effects among these systems
+
+This breadth is a long-term design target, not a requirement to implement all domains at once.
+
 - Real Earth canonical world
 - Historical snapshots
 - Data provenance
@@ -195,6 +226,8 @@ The user changes one thing and sees understandable consequences.
 - Current-condition ingestion
 - News and event interpretation pipeline
 - Scenario experiments
+- Cross-domain causal simulation
+- Economic, market, and commodity projections
 - Uncertainty representation
 - Model and version attribution
 - Observed versus estimated versus simulated state

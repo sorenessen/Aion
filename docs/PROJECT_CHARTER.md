@@ -95,7 +95,15 @@ Higher-resolution state must remain consistent with lower-resolution aggregate s
 
 ## Scientific Integrity
 
+Earth Observatory is intended to become a broad simulation of real-world systems rather than a model confined to one scientific or human domain.
+
+Its long-term scope may include physical, biological, environmental, economic, social, technological, and geopolitical systems wherever they can be represented responsibly.
+
+Aion should preserve the ability to model causal relationships across those domains, including effects involving resources, populations, economies, markets, commodities, trade, governments, technology, ecosystems, climate, and other measurable systems.
+
 Earth simulation should prefer established domain models, authoritative datasets, and transparent assumptions over invented equations.
+
+Aion should represent uncertainty, disagreement, missing knowledge, and model limitations explicitly rather than manufacture false precision.
 
 Artificial intelligence is not the authority governing physical reality.
 
