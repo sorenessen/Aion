@@ -112,13 +112,13 @@ Temperature and ice-albedo feedback.
 
 Acceptance criteria:
 
-- [ ] System consumes defined inputs
-- [ ] System produces deterministic outputs where expected
-- [ ] Advancing time changes planetary state
+- [x] System consumes defined inputs
+- [x] System produces deterministic outputs where expected
+- [x] Advancing time changes planetary state
 - [ ] Cause of change can be represented in history
-- [ ] Tests cover stable, warming, and cooling cases
-- [ ] Model assumptions are documented
-- [ ] Model is clearly identified as simplified, not a real Earth climate model
+- [x] Tests cover stable, warming, and cooling cases
+- [x] Model assumptions are documented
+- [x] Model is clearly identified as simplified, not a real Earth climate model
 
 ## Phase 4 - Timeline and Branching
 
