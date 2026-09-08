@@ -31,7 +31,7 @@ Build the smallest complete vertical foundation for Aion: one persistent planet,
 - [x] Define immutable simulation-time representation
 - [x] Define simulation clock
 - [x] Define world state
-- [ ] Define planet state
+- [x] Define planet state
 - [x] Define simulation step/tick contract
 - [ ] Define event/history model
 - [ ] Define intervention model
@@ -63,18 +63,18 @@ A world owns one coherent planet state.
 
 Initial candidate properties:
 
-- [ ] Radius
-- [ ] Surface gravity
-- [ ] Mean surface temperature
+- [x] Radius
+- [x] Surface gravity
+- [x] Mean surface temperature
 - [ ] Atmospheric pressure
 - [ ] Atmospheric composition
-- [ ] Surface water fraction
-- [ ] Ice coverage
+- [x] Surface water fraction
+- [x] Ice coverage
 - [ ] Habitability indicator
 
 Acceptance criteria:
 
-- [ ] Planet can be created from explicit initial conditions
+- [x] Planet can be created from explicit initial conditions
 - [ ] Planet state is serializable
 - [ ] Planet state can be cloned or forked safely
 - [ ] Planet state changes only through defined simulation operations
