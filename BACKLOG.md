@@ -70,7 +70,12 @@ Initial candidate properties:
 - [x] Atmospheric composition
 - [x] Surface water fraction
 - [x] Ice coverage
-- [ ] Habitability indicator
+- [x] Habitability assessment foundation
+  - [x] Define profile-specific assessment contract
+  - [x] Preserve uncertainty and missing-factor reporting
+  - [x] Establish Earth-like surface life reference profile
+  - [x] Avoid universal uninhabitability claims from limited surface data
+  - [ ] Implement scientifically calibrated biological profiles when supporting environmental models are available
 
 Acceptance criteria:
 
