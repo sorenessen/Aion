@@ -124,7 +124,8 @@ public class WorldStateTests
             new PlanetEnvironment(
                 289.15,
                 0.71,
-                0.03));
+                0.03,
+                AtmosphereState.Vacuum));
 
         var result = world.ReplacePlanet(replacement);
 
@@ -158,7 +159,8 @@ public class WorldStateTests
             new PlanetEnvironment(
                 288.15,
                 0.71,
-                0.03));
+                0.03,
+                AtmosphereState.Vacuum));
     }
 
 }

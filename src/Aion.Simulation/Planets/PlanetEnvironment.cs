@@ -5,7 +5,8 @@ public sealed record PlanetEnvironment
     public PlanetEnvironment(
         double meanSurfaceTemperatureKelvin,
         double surfaceWaterFraction,
-        double iceCoverageFraction)
+        double iceCoverageFraction,
+        AtmosphereState atmosphere)
     {
         if (!double.IsFinite(meanSurfaceTemperatureKelvin) ||
             meanSurfaceTemperatureKelvin < 0)
@@ -33,9 +34,12 @@ public sealed record PlanetEnvironment
                 "Ice coverage fraction must be between 0 and 1.");
         }
 
+        ArgumentNullException.ThrowIfNull(atmosphere);
+
         MeanSurfaceTemperatureKelvin = meanSurfaceTemperatureKelvin;
         SurfaceWaterFraction = surfaceWaterFraction;
         IceCoverageFraction = iceCoverageFraction;
+        Atmosphere = atmosphere;
     }
 
     public double MeanSurfaceTemperatureKelvin { get; }
@@ -43,4 +47,6 @@ public sealed record PlanetEnvironment
     public double SurfaceWaterFraction { get; }
 
     public double IceCoverageFraction { get; }
+
+    public AtmosphereState Atmosphere { get; }
 }

@@ -7,14 +7,18 @@ public class PlanetEnvironmentTests
     [Fact]
     public void Constructor_PreservesInitialState()
     {
+        var atmosphere = AtmosphereState.Vacuum;
+
         var environment = new PlanetEnvironment(
             288.15,
             0.71,
-            0.03);
+            0.03,
+            atmosphere);
 
         Assert.Equal(288.15, environment.MeanSurfaceTemperatureKelvin);
         Assert.Equal(0.71, environment.SurfaceWaterFraction);
         Assert.Equal(0.03, environment.IceCoverageFraction);
+        Assert.Same(atmosphere, environment.Atmosphere);
     }
 
     [Theory]
@@ -27,7 +31,8 @@ public class PlanetEnvironmentTests
             () => new PlanetEnvironment(
                 temperatureKelvin,
                 0.71,
-                0.03));
+                0.03,
+                AtmosphereState.Vacuum));
     }
 
     [Theory]
@@ -41,7 +46,8 @@ public class PlanetEnvironmentTests
             () => new PlanetEnvironment(
                 288.15,
                 waterFraction,
-                0.03));
+                0.03,
+                AtmosphereState.Vacuum));
     }
 
     [Theory]
@@ -55,7 +61,8 @@ public class PlanetEnvironmentTests
             () => new PlanetEnvironment(
                 288.15,
                 0.71,
-                iceFraction));
+                iceFraction,
+                AtmosphereState.Vacuum));
     }
 
     [Fact]
@@ -64,9 +71,43 @@ public class PlanetEnvironmentTests
         var environment = new PlanetEnvironment(
             288.15,
             0.20,
-            0.30);
+            0.30,
+            AtmosphereState.Vacuum);
 
         Assert.Equal(0.20, environment.SurfaceWaterFraction);
         Assert.Equal(0.30, environment.IceCoverageFraction);
     }
+    [Fact]
+    public void Constructor_PreservesAtmosphere()
+    {
+        var atmosphere = new AtmosphereState(
+            101_325,
+            new Dictionary<string, double>
+            {
+                ["N2"] = 0.78,
+                ["O2"] = 0.21,
+                ["Ar"] = 0.01
+            });
+
+        var environment = new PlanetEnvironment(
+            288.15,
+            0.71,
+            0.03,
+            atmosphere);
+
+        Assert.Equal(atmosphere, environment.Atmosphere);
+    }
+
+    [Fact]
+    public void Constructor_RejectsNullAtmosphere()
+    {
+        Assert.Throws<ArgumentNullException>(
+            () => new PlanetEnvironment(
+                288.15,
+                0.71,
+                0.03,
+                null!));
+    }
+
+
 }

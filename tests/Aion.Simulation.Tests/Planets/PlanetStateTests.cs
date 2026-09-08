@@ -12,7 +12,8 @@ public class PlanetStateTests
         var environment = new PlanetEnvironment(
             288.15,
             0.71,
-            0.03);
+            0.03,
+            AtmosphereState.Vacuum);
 
         var planet = new PlanetState(
             id,
@@ -37,7 +38,7 @@ public class PlanetStateTests
                 "Earth",
                 5.9722e24,
                 6_371_000,
-                new PlanetEnvironment(288.15, 0.71, 0.03)));
+                new PlanetEnvironment(288.15, 0.71, 0.03, AtmosphereState.Vacuum)));
     }
 
     [Theory]
@@ -51,7 +52,7 @@ public class PlanetStateTests
                 name,
                 5.9722e24,
                 6_371_000,
-                new PlanetEnvironment(288.15, 0.71, 0.03)));
+                new PlanetEnvironment(288.15, 0.71, 0.03, AtmosphereState.Vacuum)));
     }
 
     [Theory]
@@ -67,7 +68,7 @@ public class PlanetStateTests
                 "Earth",
                 massKilograms,
                 6_371_000,
-                new PlanetEnvironment(288.15, 0.71, 0.03)));
+                new PlanetEnvironment(288.15, 0.71, 0.03, AtmosphereState.Vacuum)));
     }
 
     [Theory]
@@ -83,7 +84,7 @@ public class PlanetStateTests
                 "Earth",
                 5.9722e24,
                 meanRadiusMeters,
-                new PlanetEnvironment(288.15, 0.71, 0.03)));
+                new PlanetEnvironment(288.15, 0.71, 0.03, AtmosphereState.Vacuum)));
     }
     [Fact]
     public void Constructor_RejectsNullEnvironment()
