@@ -180,10 +180,10 @@ Candidate client:
 
 TypeScript web application with Babylon.js or another browser-native renderer selected after a focused technical spike.
 
-- [ ] Create Est.Web
-- [ ] Render large 3D planet
-- [ ] Orbit camera
-- [ ] Zoom controls
+- [x] Create Est.Web
+- [x] Render large 3D planet
+- [x] Orbit camera
+- [x] Zoom controls
 - [ ] Basic lighting
 - [ ] Basic generated or placeholder surface
 - [ ] Fetch authoritative world state from API

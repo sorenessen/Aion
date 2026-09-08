@@ -14,7 +14,7 @@ From the repository root:
 dotnet test Est.slnx
 ```
 
-Latest verified result at this update: 202 passed, 0 failed.
+Latest verified result at this update: 222 passed, 0 failed.
 
 ## Repository Inspection
 
