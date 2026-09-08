@@ -1,0 +1,208 @@
+import 'cesium/Build/Cesium/Widgets/widgets.css'
+import '../style.css'
+
+import {
+  Cartesian3,
+  Color,
+  createWorldTerrainAsync,
+  ImageryLayer,
+  Ion,
+  Material,
+  Rectangle,
+  Viewer,
+  WebMapServiceImageryProvider,
+} from 'cesium'
+
+const token = import.meta.env.VITE_CESIUM_ION_TOKEN
+
+if (!token) {
+  throw new Error(
+    'VITE_CESIUM_ION_TOKEN is required for the Cesium evaluation.',
+  )
+}
+
+Ion.defaultAccessToken = token
+
+const app = document.querySelector<HTMLDivElement>('#app')
+
+if (!app) {
+  throw new Error('Application root was not found.')
+}
+
+app.innerHTML = `
+  <div id="cesiumContainer" aria-label="Est Cesium globe evaluation"></div>
+
+  <section class="render-evaluation-panel">
+    <div class="render-evaluation-heading">
+      <strong>Est Rendering Evaluation</strong>
+      <span id="lookLabel">Baseline</span>
+    </div>
+
+    <div class="render-evaluation-actions">
+      <button id="baselineButton" type="button">Baseline</button>
+      <button id="estButton" type="button">Terrain Study</button>
+      <button id="landCoverButton" type="button">Land Cover</button>
+    </div>
+
+  </section>
+`
+
+const terrainProvider = await createWorldTerrainAsync({
+  requestVertexNormals: true,
+  requestWaterMask: true,
+})
+
+const imageryLayer = ImageryLayer.fromWorldImagery({})
+
+const landCoverProvider = new WebMapServiceImageryProvider({
+  url: 'https://dmsdata.cr.usgs.gov/geoserver/mrlc_Land-Cover-Native_conus_year_data/wms',
+  layers: 'Land-Cover-Native_conus_year_data',
+  parameters: {
+    transparent: true,
+    format: 'image/png',
+  },
+  rectangle: Rectangle.fromDegrees(-124.5, 45.5, -120.0, 48.5),
+  credit: 'USGS / MRLC Annual NLCD',
+})
+
+const viewer = new Viewer('cesiumContainer', {
+  terrainProvider,
+  baseLayer: imageryLayer,
+  animation: false,
+  baseLayerPicker: false,
+  fullscreenButton: false,
+  geocoder: false,
+  homeButton: false,
+  infoBox: false,
+  navigationHelpButton: false,
+  sceneModePicker: false,
+  selectionIndicator: false,
+  timeline: false,
+})
+
+viewer.scene.backgroundColor = Color.BLACK
+viewer.scene.globe.enableLighting = true
+viewer.scene.globe.depthTestAgainstTerrain = true
+viewer.scene.globe.showGroundAtmosphere = true
+viewer.scene.globe.dynamicAtmosphereLighting = true
+
+viewer.camera.setView({
+  destination: Cartesian3.fromDegrees(
+    -119.6,
+    37.75,
+    12_000_000,
+  ),
+})
+
+function requireElement<T extends HTMLElement>(
+  selector: string,
+): T {
+  const element = document.querySelector<T>(selector)
+
+  if (!element) {
+    throw new Error(`Required element was not found: ${selector}`)
+  }
+
+  return element
+}
+
+const baselineButton =
+  requireElement<HTMLButtonElement>('#baselineButton')
+
+const estButton =
+  requireElement<HTMLButtonElement>('#estButton')
+
+const landCoverButton =
+  requireElement<HTMLButtonElement>('#landCoverButton')
+
+const lookLabel =
+  requireElement<HTMLSpanElement>('#lookLabel')
+
+const ramp = document.createElement('canvas')
+ramp.width = 256
+ramp.height = 1
+
+const context = ramp.getContext('2d')
+
+if (!context) {
+  throw new Error('Could not create terrain color ramp.')
+}
+
+const gradient = context.createLinearGradient(0, 0, 256, 0)
+
+gradient.addColorStop(0.00, '#092b46')
+gradient.addColorStop(0.18, '#14506a')
+gradient.addColorStop(0.28, '#287d8e')
+gradient.addColorStop(0.30, '#d1c6a2')
+gradient.addColorStop(0.36, '#52734c')
+gradient.addColorStop(0.48, '#71835a')
+gradient.addColorStop(0.62, '#a79b77')
+gradient.addColorStop(0.78, '#817e78')
+gradient.addColorStop(0.91, '#c4c5c0')
+gradient.addColorStop(1.00, '#f2f3f0')
+
+context.fillStyle = gradient
+context.fillRect(0, 0, ramp.width, ramp.height)
+
+const terrainMaterial = Material.fromType(
+  Material.ElevationRampType,
+  {
+    image: ramp,
+    minimumHeight: -1000,
+    maximumHeight: 6000,
+  },
+)
+
+const landCoverLayer = viewer.imageryLayers.addImageryProvider(
+  landCoverProvider,
+)
+landCoverLayer.show = false
+
+function applyBaseline(): void {
+  viewer.scene.globe.material = undefined
+  imageryLayer.show = true
+  landCoverLayer.show = false
+
+  viewer.scene.globe.lambertDiffuseMultiplier = 1
+  viewer.scene.globe.atmosphereLightIntensity = 10
+
+  imageryLayer.brightness = 1
+  imageryLayer.contrast = 1
+  imageryLayer.saturation = 1
+  imageryLayer.gamma = 1
+
+  lookLabel.textContent = 'Baseline'
+}
+
+function applyEstLook(): void {
+  landCoverLayer.show = false
+  imageryLayer.show = false
+  viewer.scene.globe.material = terrainMaterial
+
+  viewer.scene.globe.lambertDiffuseMultiplier = 1.15
+  viewer.scene.globe.atmosphereLightIntensity = 12
+
+  lookLabel.textContent = 'Terrain Study'
+}
+
+function applyLandCover(): void {
+  viewer.scene.globe.material = undefined
+  imageryLayer.show = false
+  landCoverLayer.show = true
+
+  viewer.scene.globe.lambertDiffuseMultiplier = 1
+  viewer.scene.globe.atmosphereLightIntensity = 10
+
+  lookLabel.textContent = 'USGS Land Cover'
+
+  viewer.camera.flyTo({
+    destination: Rectangle.fromDegrees(-124.5, 45.5, -120.0, 48.5),
+    duration: 2,
+  })
+}
+
+baselineButton.addEventListener('click', applyBaseline)
+estButton.addEventListener('click', applyEstLook)
+landCoverButton.addEventListener('click', applyLandCover)
+
+applyBaseline()

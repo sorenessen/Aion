@@ -342,3 +342,13 @@ These are intentionally not rejected. They are simply not allowed to distort Fir
 - Interstellar travel
 - Galaxy generation
 - Cross-universe travel
+
+### Pending: Olympia land-cover vertical slice
+
+- [ ] Retrieve the 2025 Annual NLCD GeoTIFF from MRLC request `5a3e2c72-778a-4f3b-9c57-be4e7b1fef82` (submitted September 8, 2026; processing may take up to 24 hours).
+- [ ] Inspect CRS, bounds, resolution, NoData, categorical values, legend, and source provenance.
+- [ ] Build a reproducible regional conversion pipeline without committing large raw datasets by default.
+- [ ] Define Est-owned surface semantics independently of NLCD codes and Cesium materials.
+- [ ] Render a coherent Olympia/Puget Sound/Mount Rainier slice using real terrain and land-cover semantics.
+- [ ] Evaluate coastline/water treatment, forests, developed areas, mountains, snow, LOD transitions, close-range quality, and performance.
+- [ ] Preserve the working satellite baseline and terrain study for comparison; keep renderer selection open.
