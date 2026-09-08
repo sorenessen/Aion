@@ -66,8 +66,8 @@ Initial candidate properties:
 - [x] Radius
 - [x] Surface gravity
 - [x] Mean surface temperature
-- [ ] Atmospheric pressure
-- [ ] Atmospheric composition
+- [x] Atmospheric pressure
+- [x] Atmospheric composition
 - [x] Surface water fraction
 - [x] Ice coverage
 - [ ] Habitability indicator
@@ -75,7 +75,13 @@ Initial candidate properties:
 Acceptance criteria:
 
 - [x] Planet can be created from explicit initial conditions
-- [ ] Planet state is serializable
+- [x] Planet state is serializable
+  - [x] Add separate Aion.Persistence project
+  - [x] Implement versioned JSON snapshot DTOs
+  - [x] Reconstruct through validating domain constructors
+  - [x] Verify basic round trip and invalid-domain rejection
+  - [x] Complete malformed-snapshot and multi-planet coverage
+  - [x] Establish serialization checkpoint
 - [ ] Planet state can be cloned or forked safely
 - [ ] Planet state changes only through defined simulation operations
 
