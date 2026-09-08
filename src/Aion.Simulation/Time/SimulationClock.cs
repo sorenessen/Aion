@@ -1,3 +1,4 @@
+using Aion.Simulation.Operations;
 using Aion.Simulation.Worlds;
 
 namespace Aion.Simulation.Time;
@@ -32,6 +33,8 @@ public sealed class SimulationClock
             return world;
         }
 
-        return world.AdvanceBy(seconds);
+        return SimulationOperationExecutor.Apply(
+            world,
+            new AdvanceTimeOperation(seconds));
     }
 }

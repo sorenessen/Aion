@@ -93,7 +93,12 @@ Acceptance criteria:
   - [x] Fork preserves planet identities and starting state
   - [x] Immutable operations allow independent divergence
   - [ ] Historical timeline branching remains Phase 4
-- [ ] Planet state changes only through defined simulation operations
+- [x] Establish defined simulation-operation boundary
+  - [x] Define ISimulationOperation and SimulationOperationExecutor
+  - [x] Implement time advancement and planet-environment replacement operations
+  - [x] Route SimulationClock through the operation boundary
+  - [x] Verify immutable state transitions and target identity preservation
+  - [ ] Revisit enforcement when causal systems require stronger execution guarantees
 
 ## Phase 3 - First Causal System
 
