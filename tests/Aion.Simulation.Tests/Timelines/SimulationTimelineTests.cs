@@ -1,3 +1,5 @@
+using Aion.Simulation.Operations;
+using Aion.Simulation.Causality;
 using Aion.Simulation.Time;
 using Aion.Simulation.Timelines;
 using Aion.Simulation.Worlds;
@@ -396,5 +398,60 @@ public class SimulationTimelineTests
             2,
             advancedAgain.Checkpoints.Length);
     }
+
+
+    [Fact]
+    public void RecordStep_MultipleChangesPreserveOrderAndAdvanceTimeOnce()
+    {
+        var world = new WorldState(
+            WorldId.New(),
+            new SimulationTime(100));
+
+        var timeline = SimulationTimeline.Create(world);
+
+        var first = new SimulationChange(
+            new AdvanceTimeOperation(0),
+            "first-system",
+            "First causal change.",
+            null,
+            60);
+
+        var second = new SimulationChange(
+            new AdvanceTimeOperation(0),
+            "second-system",
+            "Second causal change.",
+            null,
+            60);
+
+        var result = new SimulationStepResult(
+            world.AdvanceBy(60),
+            60,
+            [first, second]);
+
+        var recorded = timeline.RecordStep(result);
+
+        Assert.Equal(
+            160,
+            recorded.CurrentWorld.CurrentTime.TotalSeconds);
+
+        Assert.Equal(2, recorded.Events.Length);
+
+        Assert.Equal("first-system", recorded.Events[0].Cause);
+        Assert.Equal("second-system", recorded.Events[1].Cause);
+
+        Assert.All(
+            recorded.Events,
+            timelineEvent =>
+                Assert.Equal(
+                    160,
+                    timelineEvent.OccurredAt.TotalSeconds));
+
+        Assert.Equal(
+            100,
+            timeline.CurrentWorld.CurrentTime.TotalSeconds);
+
+        Assert.Empty(timeline.Events);
+    }
+
 
 }

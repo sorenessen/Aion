@@ -115,6 +115,112 @@ public class SimulationStepRunnerTests
                 new InvalidSystem()));
     }
 
+    [Fact]
+    public void Step_MultipleSystemsAdvanceTimeOnceAndPreserveOrder()
+    {
+        var planet = CreateEarth();
+        var world = new WorldState(
+            WorldId.New(),
+            new SimulationTime(100),
+            [planet]);
+
+        var firstEnvironment = new PlanetEnvironment(
+            290, 0.71, 0.02, planet.Environment.Atmosphere);
+        var secondEnvironment = new PlanetEnvironment(
+            300, 0.71, 0.01, planet.Environment.Atmosphere);
+
+        var result = SimulationStepRunner.Step(
+            world,
+            60,
+            new ICausalSystem[]
+            {
+                new FixedEnvironmentSystem(planet.Id, firstEnvironment),
+                new FixedEnvironmentSystem(planet.Id, secondEnvironment)
+            });
+
+        Assert.Equal(160, result.World.CurrentTime.TotalSeconds);
+        Assert.Equal(60, result.ElapsedSeconds);
+        Assert.Equal(2, result.Changes.Length);
+        Assert.Same(secondEnvironment, result.World.Planets[0].Environment);
+        Assert.Equal(100, world.CurrentTime.TotalSeconds);
+        Assert.Same(planet.Environment, world.Planets[0].Environment);
+    }
+
+    [Fact]
+    public void Step_LaterSystemFailureDoesNotChangeSourceWorld()
+    {
+        var planet = CreateEarth();
+        var world = new WorldState(
+            WorldId.New(),
+            SimulationTime.Zero,
+            [planet]);
+
+        var originalEnvironment = planet.Environment;
+
+        Assert.Throws<InvalidOperationException>(
+            () => SimulationStepRunner.Step(
+                world,
+                60,
+                new ICausalSystem[]
+                {
+                    new FixedEnvironmentSystem(
+                        planet.Id,
+                        new PlanetEnvironment(
+                            300, 0.71, 0,
+                            originalEnvironment.Atmosphere)),
+                    new InvalidSystem()
+                }));
+
+        Assert.Equal(SimulationTime.Zero, world.CurrentTime);
+        Assert.Same(originalEnvironment, world.Planets[0].Environment);
+    }
+
+    [Fact]
+    public void Step_EmptySystemCollectionAdvancesTimeOnce()
+    {
+        var world = new WorldState(
+            WorldId.New(),
+            new SimulationTime(100));
+
+        var result = SimulationStepRunner.Step(
+            world,
+            60,
+            Array.Empty<ICausalSystem>());
+
+        Assert.Equal(160, result.World.CurrentTime.TotalSeconds);
+
+        var change = Assert.Single(result.Changes);
+
+        Assert.Equal(
+            "Explicit time advancement",
+            change.Cause);
+
+        Assert.Equal(
+            "Advanced simulation time by 60 seconds.",
+            change.Summary);
+
+        Assert.Equal(
+            60,
+            change.ElapsedSeconds);
+    }
+
+    [Fact]
+    public void Step_RejectsCausalOperationThatAdvancesTime()
+    {
+        var world = new WorldState(
+            WorldId.New(),
+            SimulationTime.Zero);
+
+        Assert.Throws<InvalidOperationException>(
+            () => SimulationStepRunner.Step(
+                world,
+                60,
+                new ICausalSystem[]
+                {
+                    new TimeAdvancingSystem()
+                }));
+    }
+
     private static PlanetState CreateEarth()
     {
         return new PlanetState(
@@ -182,4 +288,20 @@ public class SimulationStepRunnerTests
             return null!;
         }
     }
+    private sealed class TimeAdvancingSystem : ICausalSystem
+    {
+        public SimulationChange Evaluate(
+            WorldState world,
+            long elapsedSeconds)
+        {
+            return new SimulationChange(
+                new AdvanceTimeOperation(1),
+                "invalid-time-change",
+                "Invalid causal time advancement.",
+                null,
+                elapsedSeconds);
+        }
+    }
+
+
 }

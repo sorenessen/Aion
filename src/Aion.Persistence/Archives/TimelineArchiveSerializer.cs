@@ -1,5 +1,7 @@
 using System.Text.Json;
 using Aion.Persistence.Snapshots;
+using Aion.Simulation.Climate;
+using Aion.Simulation.Definitions;
 using Aion.Simulation.Planets;
 using Aion.Simulation.Time;
 using Aion.Simulation.Timelines;
@@ -8,7 +10,8 @@ namespace Aion.Persistence.Archives;
 
 public static class TimelineArchiveSerializer
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
+    private const int LegacySchemaVersion = 1;
 
     private static readonly JsonSerializerOptions SerializerOptions =
         new()
@@ -25,8 +28,22 @@ public static class TimelineArchiveSerializer
         SimulationTimeline timeline,
         TimelineArchiveProvenance provenance)
     {
+        return Serialize(
+            timeline,
+            SimulationDefinition.Empty,
+            provenance);
+    }
+
+    public static string Serialize(
+        SimulationTimeline timeline,
+        SimulationDefinition definition,
+        TimelineArchiveProvenance provenance)
+    {
         ArgumentNullException.ThrowIfNull(timeline);
+        ArgumentNullException.ThrowIfNull(definition);
         ArgumentNullException.ThrowIfNull(provenance);
+
+        definition.ValidateFor(timeline.CurrentWorld);
 
         var archive = new TimelineArchiveSnapshot
         {
@@ -37,6 +54,7 @@ public static class TimelineArchiveSerializer
                 ProducerVersion = provenance.ProducerVersion,
                 Origin = provenance.Origin
             },
+            Definition = ToDefinitionSnapshot(definition),
             TimelineId = timeline.Id.Value,
             ParentTimelineId =
                 timeline.ParentTimelineId?.Value,
@@ -74,7 +92,8 @@ public static class TimelineArchiveSerializer
             ?? throw new JsonException(
                 "Archive JSON did not contain a timeline.");
 
-        if (archive.SchemaVersion != CurrentSchemaVersion)
+        if (archive.SchemaVersion != LegacySchemaVersion &&
+            archive.SchemaVersion != CurrentSchemaVersion)
         {
             throw new NotSupportedException(
                 $"Timeline archive schema version {archive.SchemaVersion} is not supported.");
@@ -121,6 +140,16 @@ public static class TimelineArchiveSerializer
             FromWorldElement(
                 archive.CurrentWorld);
 
+        var definition =
+            archive.SchemaVersion == LegacySchemaVersion
+                ? SimulationDefinition.Empty
+                : FromDefinitionSnapshot(
+                    archive.Definition
+                    ?? throw new JsonException(
+                        "Archive simulation definition is required."));
+
+        definition.ValidateFor(currentWorld);
+
         var timeline =
             SimulationTimeline.Restore(
                 timelineId,
@@ -148,6 +177,7 @@ public static class TimelineArchiveSerializer
 
         return new TimelineArchive(
             timeline,
+            definition,
             provenance);
     }
 
@@ -224,6 +254,92 @@ public static class TimelineArchiveSerializer
             snapshot.Metrics);
     }
 
+    private static DefinitionSnapshot ToDefinitionSnapshot(
+        SimulationDefinition definition)
+    {
+        return new DefinitionSnapshot
+        {
+            PlanetaryEnergyBalanceModels =
+                definition.PlanetaryEnergyBalanceModels
+                    .Select(
+                        model =>
+                            new PlanetaryEnergyBalanceModelSnapshot
+                            {
+                                PlanetId = model.PlanetId.Value,
+                                Parameters =
+                                    new PlanetaryEnergyBalanceParametersSnapshot
+                                    {
+                                        StellarFluxWattsPerSquareMeter =
+                                            model.Parameters
+                                                .StellarFluxWattsPerSquareMeter,
+                                        EffectiveLongwaveEmissivity =
+                                            model.Parameters
+                                                .EffectiveLongwaveEmissivity,
+                                        EffectiveHeatCapacityJoulesPerSquareMeterKelvin =
+                                            model.Parameters
+                                                .EffectiveHeatCapacityJoulesPerSquareMeterKelvin,
+                                        IceFreeAlbedo =
+                                            model.Parameters.IceFreeAlbedo,
+                                        IceAlbedo =
+                                            model.Parameters.IceAlbedo,
+                                        FullIceTemperatureKelvin =
+                                            model.Parameters
+                                                .FullIceTemperatureKelvin,
+                                        IceFreeTemperatureKelvin =
+                                            model.Parameters
+                                                .IceFreeTemperatureKelvin,
+                                        IceResponseTimescaleSeconds =
+                                            model.Parameters
+                                                .IceResponseTimescaleSeconds
+                                    }
+                            })
+                    .ToArray()
+        };
+    }
+
+    private static SimulationDefinition FromDefinitionSnapshot(
+        DefinitionSnapshot snapshot)
+    {
+        if (snapshot.PlanetaryEnergyBalanceModels is null)
+        {
+            throw new JsonException(
+                "Planetary energy-balance model collection is required.");
+        }
+
+        var models =
+            snapshot.PlanetaryEnergyBalanceModels
+                .Select(
+                    model =>
+                    {
+                        if (model.Parameters is null)
+                        {
+                            throw new JsonException(
+                                "Planetary energy-balance model parameters are required.");
+                        }
+
+                        return new PlanetaryEnergyBalanceModelDefinition(
+                            new PlanetId(model.PlanetId),
+                            new PlanetaryEnergyBalanceParameters(
+                                model.Parameters
+                                    .StellarFluxWattsPerSquareMeter,
+                                model.Parameters
+                                    .EffectiveLongwaveEmissivity,
+                                model.Parameters
+                                    .EffectiveHeatCapacityJoulesPerSquareMeterKelvin,
+                                model.Parameters.IceFreeAlbedo,
+                                model.Parameters.IceAlbedo,
+                                model.Parameters
+                                    .FullIceTemperatureKelvin,
+                                model.Parameters
+                                    .IceFreeTemperatureKelvin,
+                                model.Parameters
+                                    .IceResponseTimescaleSeconds));
+                    })
+                .ToArray();
+
+        return new SimulationDefinition(models);
+    }
+
     private static JsonElement ToWorldElement(
         Aion.Simulation.Worlds.WorldState world)
     {
@@ -253,6 +369,8 @@ public static class TimelineArchiveSerializer
 
         public required ProvenanceSnapshot Provenance { get; set; }
 
+        public DefinitionSnapshot? Definition { get; set; }
+
         public required Guid TimelineId { get; set; }
 
         public Guid? ParentTimelineId { get; set; }
@@ -273,6 +391,40 @@ public static class TimelineArchiveSerializer
         public required string ProducerVersion { get; set; }
 
         public required string Origin { get; set; }
+    }
+
+    private sealed class DefinitionSnapshot
+    {
+        public required PlanetaryEnergyBalanceModelSnapshot[]
+            PlanetaryEnergyBalanceModels { get; set; }
+    }
+
+    private sealed class PlanetaryEnergyBalanceModelSnapshot
+    {
+        public required Guid PlanetId { get; set; }
+
+        public required PlanetaryEnergyBalanceParametersSnapshot
+            Parameters { get; set; }
+    }
+
+    private sealed class PlanetaryEnergyBalanceParametersSnapshot
+    {
+        public required double StellarFluxWattsPerSquareMeter { get; set; }
+
+        public required double EffectiveLongwaveEmissivity { get; set; }
+
+        public required double
+            EffectiveHeatCapacityJoulesPerSquareMeterKelvin { get; set; }
+
+        public required double IceFreeAlbedo { get; set; }
+
+        public required double IceAlbedo { get; set; }
+
+        public required double FullIceTemperatureKelvin { get; set; }
+
+        public required double IceFreeTemperatureKelvin { get; set; }
+
+        public required double IceResponseTimescaleSeconds { get; set; }
     }
 
     private sealed class CheckpointSnapshot

@@ -1,0 +1,28 @@
+using Aion.Simulation.Climate;
+using Aion.Simulation.Planets;
+
+namespace Aion.Simulation.Definitions;
+
+public sealed record PlanetaryEnergyBalanceModelDefinition
+{
+    public PlanetaryEnergyBalanceModelDefinition(
+        PlanetId planetId,
+        PlanetaryEnergyBalanceParameters parameters)
+    {
+        if (planetId.Value == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "Planet identity cannot be empty.",
+                nameof(planetId));
+        }
+
+        ArgumentNullException.ThrowIfNull(parameters);
+
+        PlanetId = planetId;
+        Parameters = parameters;
+    }
+
+    public PlanetId PlanetId { get; }
+
+    public PlanetaryEnergyBalanceParameters Parameters { get; }
+}

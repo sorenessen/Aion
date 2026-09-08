@@ -1,6 +1,9 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aion.Persistence.Archives;
+using Aion.Simulation.Climate;
+using Aion.Simulation.Definitions;
+using Aion.Simulation.Planets;
 using Aion.Simulation.Causality;
 using Aion.Simulation.Operations;
 using Aion.Simulation.Time;
@@ -105,6 +108,91 @@ public class TimelineArchiveSerializerTests
     }
 
     [Fact]
+    public void RoundTrip_PreservesSimulationDefinition()
+    {
+        var planet =
+            new PlanetState(
+                PlanetId.New(),
+                "Earth",
+                5.9722e24,
+                6_371_000,
+                new PlanetEnvironment(
+                    288.15,
+                    0.71,
+                    0.03,
+                    AtmosphereState.Vacuum));
+
+        var timeline =
+            SimulationTimeline.Create(
+                new WorldState(
+                    WorldId.New(),
+                    SimulationTime.Zero,
+                    [planet]));
+
+        var parameters =
+            new PlanetaryEnergyBalanceParameters(
+                1361,
+                0.61,
+                1.0e8,
+                0.30,
+                0.60,
+                263.15,
+                273.15,
+                31_536_000);
+
+        var definition =
+            new SimulationDefinition(
+            [
+                new PlanetaryEnergyBalanceModelDefinition(
+                    planet.Id,
+                    parameters)
+            ]);
+
+        var json =
+            TimelineArchiveSerializer.Serialize(
+                timeline,
+                definition,
+                CreateProvenance());
+
+        var restored =
+            TimelineArchiveSerializer.Deserialize(json);
+
+        var model =
+            Assert.Single(
+                restored.Definition
+                    .PlanetaryEnergyBalanceModels);
+
+        Assert.Equal(planet.Id, model.PlanetId);
+        Assert.Equal(
+            parameters,
+            model.Parameters);
+    }
+
+    [Fact]
+    public void Deserialize_Version1ArchiveUsesEmptySimulationDefinition()
+    {
+        var json =
+            TimelineArchiveSerializer.Serialize(
+                CreateTimelineWithHistory(),
+                CreateProvenance());
+
+        var node = JsonNode.Parse(json)
+            ?? throw new InvalidOperationException(
+                "Archive JSON did not parse.");
+
+        node["schemaVersion"] = 1;
+        node.AsObject().Remove("definition");
+
+        var restored =
+            TimelineArchiveSerializer.Deserialize(
+                node.ToJsonString());
+
+        Assert.Empty(
+            restored.Definition
+                .PlanetaryEnergyBalanceModels);
+    }
+
+    [Fact]
     public void Deserialize_RejectsUnsupportedSchemaVersion()
     {
         var timeline = CreateTimelineWithHistory();
@@ -117,7 +205,7 @@ public class TimelineArchiveSerializerTests
 
         var modified =
             json.Replace(
-                "\"schemaVersion\": 1",
+                "\"schemaVersion\": 2",
                 "\"schemaVersion\": 999",
                 StringComparison.Ordinal);
 

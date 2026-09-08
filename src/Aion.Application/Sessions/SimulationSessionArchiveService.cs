@@ -28,6 +28,7 @@ public sealed class SimulationSessionArchiveService
         _store.SaveNew(
             path,
             timeline,
+            session.Definition,
             provenance);
 
         return timeline;
@@ -36,6 +37,9 @@ public sealed class SimulationSessionArchiveService
     public SimulationSessionId Load(string path)
     {
         var archive = _store.Load(path);
-        return _manager.Restore(archive.Timeline);
+
+        return _manager.Restore(
+            archive.Timeline,
+            archive.Definition);
     }
 }

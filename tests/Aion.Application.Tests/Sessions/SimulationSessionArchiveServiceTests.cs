@@ -1,6 +1,8 @@
 using Aion.Application.Sessions;
 using Aion.Persistence.Archives;
 using Aion.Persistence.Storage;
+using Aion.Simulation.Climate;
+using Aion.Simulation.Definitions;
 using Aion.Simulation.Planets;
 using Aion.Simulation.Time;
 using Aion.Simulation.Worlds;
@@ -179,4 +181,108 @@ public sealed class SimulationSessionArchiveServiceTests
                 Directory.Delete(directory, recursive: true);
         }
     }
+
+    [Fact]
+    public void SaveAndLoad_PreservesSimulationDefinition()
+    {
+        var path = Path.Combine(
+            Path.GetTempPath(),
+            "Aion.Tests",
+            Guid.NewGuid().ToString("N"),
+            "timeline.json");
+
+        try
+        {
+            var manager =
+                new SimulationSessionManager();
+
+            var service =
+                new SimulationSessionArchiveService(
+                    manager,
+                    new TimelineArchiveFileStore());
+
+            var planet =
+                new PlanetState(
+                    PlanetId.New(),
+                    "Earth",
+                    5.9722e24,
+                    6_371_000,
+                    new PlanetEnvironment(
+                        288.15,
+                        0.71,
+                        0.03,
+                        AtmosphereState.Vacuum));
+
+            var world =
+                new WorldState(
+                    WorldId.New(),
+                    SimulationTime.Zero,
+                    [planet]);
+
+            var parameters =
+                new PlanetaryEnergyBalanceParameters(
+                    1361,
+                    0.61,
+                    1.0e8,
+                    0.30,
+                    0.60,
+                    263.15,
+                    273.15,
+                    31_536_000);
+
+            var definition =
+                new SimulationDefinition(
+                [
+                    new PlanetaryEnergyBalanceModelDefinition(
+                        planet.Id,
+                        parameters)
+                ]);
+
+            var originalId =
+                manager.Create(
+                    world,
+                    definition);
+
+            service.Save(
+                originalId,
+                path,
+                new TimelineArchiveProvenance(
+                    "Aion",
+                    "0.1.0-alpha",
+                    "simulation"));
+
+            var restoredId =
+                service.Load(path);
+
+            var restored =
+                manager.Get(restoredId);
+
+            var model =
+                Assert.Single(
+                    restored.Definition
+                        .PlanetaryEnergyBalanceModels);
+
+            Assert.Equal(
+                planet.Id,
+                model.PlanetId);
+
+            Assert.Equal(
+                parameters,
+                model.Parameters);
+        }
+        finally
+        {
+            var directory =
+                Path.GetDirectoryName(path)!;
+
+            if (Directory.Exists(directory))
+            {
+                Directory.Delete(
+                    directory,
+                    recursive: true);
+            }
+        }
+    }
+
+
 }

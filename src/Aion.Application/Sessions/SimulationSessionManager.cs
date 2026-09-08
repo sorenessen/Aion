@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Aion.Simulation.Definitions;
 using Aion.Simulation.Timelines;
 using Aion.Simulation.Worlds;
 
@@ -13,10 +14,18 @@ public sealed class SimulationSessionManager
     public SimulationSessionId Create(
         WorldState initialWorld)
     {
+        return Create(initialWorld, SimulationDefinition.Empty);
+    }
+
+    public SimulationSessionId Create(
+        WorldState initialWorld,
+        SimulationDefinition definition)
+    {
         ArgumentNullException.ThrowIfNull(initialWorld);
+        ArgumentNullException.ThrowIfNull(definition);
 
         var id = SimulationSessionId.New();
-        var session = new SimulationSession(initialWorld);
+        var session = new SimulationSession(initialWorld, definition);
 
         if (!_sessions.TryAdd(id, session))
         {
@@ -30,10 +39,18 @@ public sealed class SimulationSessionManager
     public SimulationSessionId Restore(
         SimulationTimeline timeline)
     {
+        return Restore(timeline, SimulationDefinition.Empty);
+    }
+
+    public SimulationSessionId Restore(
+        SimulationTimeline timeline,
+        SimulationDefinition definition)
+    {
         ArgumentNullException.ThrowIfNull(timeline);
+        ArgumentNullException.ThrowIfNull(definition);
 
         var id = SimulationSessionId.New();
-        var session = new SimulationSession(timeline);
+        var session = new SimulationSession(timeline, definition);
 
         if (!_sessions.TryAdd(id, session))
         {

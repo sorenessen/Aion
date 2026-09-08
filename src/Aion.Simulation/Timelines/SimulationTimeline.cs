@@ -238,7 +238,7 @@ public sealed record SimulationTimeline
 
         var expectedTime =
             CurrentWorld.CurrentTime.AdvanceBy(
-                result.Change.ElapsedSeconds);
+                result.ElapsedSeconds);
 
         if (result.World.CurrentTime != expectedTime)
         {
@@ -246,11 +246,22 @@ public sealed record SimulationTimeline
                 "The step result time does not match the timeline's current time and elapsed duration.");
         }
 
-        var timelineEvent =
-            TimelineEvent.FromChange(
-                Id,
-                result.World.CurrentTime,
-                result.Change);
+        var events = Events;
+
+        foreach (var change in result.Changes)
+        {
+            if (change.ElapsedSeconds != result.ElapsedSeconds)
+            {
+                throw new InvalidOperationException(
+                    "A recorded change must describe the step duration.");
+            }
+
+            events = events.Add(
+                TimelineEvent.FromChange(
+                    Id,
+                    result.World.CurrentTime,
+                    change));
+        }
 
         return new SimulationTimeline(
             Id,
@@ -259,7 +270,7 @@ public sealed record SimulationTimeline
             InitialCheckpoint,
             result.World.Copy(),
             Checkpoints,
-            Events.Add(timelineEvent));
+            events);
     }
 
     public SimulationTimeline CreateCheckpoint()

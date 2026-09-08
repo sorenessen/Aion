@@ -1,4 +1,6 @@
 using Aion.Simulation.Causality;
+using Aion.Simulation.Climate;
+using Aion.Simulation.Definitions;
 using Aion.Simulation.Operations;
 using Aion.Simulation.Planets;
 using Aion.Simulation.Time;
@@ -11,18 +13,52 @@ public sealed class SimulationSession
 {
     private readonly object _sync = new();
     private readonly SimulationClock _clock = new();
+    private readonly IReadOnlyList<ICausalSystem> _causalSystems;
     private SimulationTimeline _timeline;
 
     public SimulationSession(WorldState initialWorld)
-        : this(SimulationTimeline.Create(initialWorld))
+        : this(
+            SimulationTimeline.Create(initialWorld),
+            SimulationDefinition.Empty)
+    {
+    }
+
+    public SimulationSession(
+        WorldState initialWorld,
+        SimulationDefinition definition)
+        : this(SimulationTimeline.Create(initialWorld), definition)
     {
     }
 
     public SimulationSession(SimulationTimeline timeline)
+        : this(timeline, SimulationDefinition.Empty)
+    {
+    }
+
+    public SimulationSession(
+        SimulationTimeline timeline,
+        SimulationDefinition definition)
     {
         ArgumentNullException.ThrowIfNull(timeline);
+        ArgumentNullException.ThrowIfNull(definition);
+
+        definition.ValidateFor(timeline.CurrentWorld);
+
         _timeline = timeline;
+        Definition = definition;
+
+        _causalSystems =
+            definition.PlanetaryEnergyBalanceModels
+                .Select(
+                    model =>
+                        (ICausalSystem)
+                            new PlanetaryEnergyBalanceSystem(
+                                model.PlanetId,
+                                model.Parameters))
+                .ToArray();
     }
+
+    public SimulationDefinition Definition { get; }
 
     public SimulationTimeline Timeline
     {
@@ -120,27 +156,14 @@ public sealed class SimulationSession
     private SimulationTimeline AdvanceCore(
         long seconds)
     {
-        var operation =
-            new AdvanceTimeOperation(seconds);
-
-        var world =
-            SimulationOperationExecutor.Apply(
+        var result =
+            SimulationStepRunner.Step(
                 _timeline.CurrentWorld,
-                operation);
-
-        var change =
-            new SimulationChange(
-                operation,
-                "Explicit time advancement",
-                $"Advanced simulation time by {seconds} seconds.",
-                null,
-                seconds);
+                seconds,
+                _causalSystems);
 
         _timeline =
-            _timeline.RecordStep(
-                new SimulationStepResult(
-                    world,
-                    change));
+            _timeline.RecordStep(result);
 
         return _timeline;
     }

@@ -1,4 +1,5 @@
 using Aion.Persistence.Archives;
+using Aion.Simulation.Definitions;
 using Aion.Simulation.Timelines;
 
 namespace Aion.Persistence.Storage;
@@ -10,9 +11,23 @@ public sealed class TimelineArchiveFileStore
         SimulationTimeline timeline,
         TimelineArchiveProvenance provenance)
     {
+        Save(
+            path,
+            timeline,
+            SimulationDefinition.Empty,
+            provenance);
+    }
+
+    public void Save(
+        string path,
+        SimulationTimeline timeline,
+        SimulationDefinition definition,
+        TimelineArchiveProvenance provenance)
+    {
         SaveCore(
             path,
             timeline,
+            definition,
             provenance,
             overwrite: true);
     }
@@ -22,9 +37,23 @@ public sealed class TimelineArchiveFileStore
         SimulationTimeline timeline,
         TimelineArchiveProvenance provenance)
     {
+        SaveNew(
+            path,
+            timeline,
+            SimulationDefinition.Empty,
+            provenance);
+    }
+
+    public void SaveNew(
+        string path,
+        SimulationTimeline timeline,
+        SimulationDefinition definition,
+        TimelineArchiveProvenance provenance)
+    {
         SaveCore(
             path,
             timeline,
+            definition,
             provenance,
             overwrite: false);
     }
@@ -32,6 +61,7 @@ public sealed class TimelineArchiveFileStore
     private static void SaveCore(
         string path,
         SimulationTimeline timeline,
+        SimulationDefinition definition,
         TimelineArchiveProvenance provenance,
         bool overwrite)
     {
@@ -43,7 +73,10 @@ public sealed class TimelineArchiveFileStore
         }
 
         ArgumentNullException.ThrowIfNull(timeline);
+        ArgumentNullException.ThrowIfNull(definition);
         ArgumentNullException.ThrowIfNull(provenance);
+
+        definition.ValidateFor(timeline.CurrentWorld);
 
         var fullPath = Path.GetFullPath(path);
         var directory = Path.GetDirectoryName(fullPath);
@@ -59,6 +92,7 @@ public sealed class TimelineArchiveFileStore
         var json =
             TimelineArchiveSerializer.Serialize(
                 timeline,
+                definition,
                 provenance);
 
         var tempPath =

@@ -1,4 +1,7 @@
 using Aion.Application.Sessions;
+using Aion.Simulation.Climate;
+using Aion.Simulation.Definitions;
+using Aion.Simulation.Planets;
 using Aion.Simulation.Planets;
 using Aion.Simulation.Time;
 using Aion.Simulation.Worlds;
@@ -150,6 +153,107 @@ public sealed class SimulationSessionTests
                 0.71,
                 0.1,
                 AtmosphereState.Vacuum));
+
+
+    [Fact]
+    public void Advance_AppliesConfiguredEnergyBalanceModel()
+    {
+        var planet =
+            new PlanetState(
+                PlanetId.New(),
+                "Earth",
+                5.9722e24,
+                6_371_000,
+                new PlanetEnvironment(
+                    288.15,
+                    0.71,
+                    0.03,
+                    AtmosphereState.Vacuum));
+
+        var world =
+            new WorldState(
+                WorldId.New(),
+                SimulationTime.Zero,
+                [planet]);
+
+        var parameters =
+            new PlanetaryEnergyBalanceParameters(
+                1361,
+                0.61,
+                1.0e8,
+                0.30,
+                0.60,
+                263.15,
+                273.15,
+                31_536_000);
+
+        var definition =
+            new SimulationDefinition(
+            [
+                new PlanetaryEnergyBalanceModelDefinition(
+                    planet.Id,
+                    parameters)
+            ]);
+
+        var session =
+            new SimulationSession(
+                world,
+                definition);
+
+        var timeline =
+            session.Advance(3600);
+
+        Assert.Equal(
+            3600,
+            timeline.CurrentWorld.CurrentTime.TotalSeconds);
+
+        var changedPlanet =
+            Assert.Single(
+                timeline.CurrentWorld.Planets);
+
+        Assert.NotEqual(
+            planet.Environment.MeanSurfaceTemperatureKelvin,
+            changedPlanet.Environment.MeanSurfaceTemperatureKelvin);
+
+        Assert.NotEqual(
+            planet.Environment.IceCoverageFraction,
+            changedPlanet.Environment.IceCoverageFraction);
+
+        Assert.Single(timeline.Events);
+
+        Assert.Equal(
+            "planetary-energy-balance",
+            timeline.Events[0].Cause);
+
+        Assert.Equal(
+            planet.Id,
+            timeline.Events[0].AffectedPlanetId);
+
+        Assert.Equal(
+            3600,
+            timeline.Events[0].ElapsedSeconds);
+    }
+
+    [Fact]
+    public void Advance_WithEmptyDefinitionOnlyAdvancesTime()
+    {
+        var session =
+            CreateSession();
+
+        var timeline =
+            session.Advance(3600);
+
+        Assert.Equal(
+            3600,
+            timeline.CurrentWorld.CurrentTime.TotalSeconds);
+
+        Assert.Single(timeline.Events);
+
+        Assert.Equal(
+            "Explicit time advancement",
+            timeline.Events[0].Cause);
+    }
+
 
     private static SimulationSession CreateSession() =>
         new(new WorldState(WorldId.New(), SimulationTime.Zero));
