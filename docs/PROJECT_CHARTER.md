@@ -123,6 +123,20 @@ Worlds need not consume dedicated computing resources continuously. Checkpoints,
 
 World owners may eventually allow others to observe, visit, or interact according to explicit permissions.
 
+## General Simulation Platform
+
+Aion's long-term game vision is not limited to a single genre, scale, or prescribed game loop.
+
+The distant goal is a coherent simulation platform capable of supporting many different kinds of experiences over shared authoritative world state.
+
+A player may eventually observe, manage, influence, inhabit, or directly participate in different parts of the simulation, from planetary and ecological systems through civilizations, economies, organizations, communities, households, and individual agents.
+
+Gameplay should emerge from interoperating simulation systems wherever practical rather than from separate incompatible versions of reality for each mode of play.
+
+The user should ultimately be able to decide what kind of experience Aion becomes for them.
+
+This breadth is a design horizon. It does not override the requirement to earn complexity incrementally.
+
 ## First Principle
 
 Aion earns complexity.

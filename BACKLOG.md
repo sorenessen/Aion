@@ -234,6 +234,16 @@ This breadth is a long-term design target, not a requirement to implement all do
 
 ## Living Worlds
 
+Living Worlds is the long-term game side of Aion.
+
+Aion is not intended to prescribe one permanent game loop. The distant goal is a general simulation platform capable of supporting many different kinds of experiences within the same coherent world model.
+
+A player may eventually choose to observe, manage, influence, inhabit, or directly participate in the simulation at different scales. Possible experiences may include planetary stewardship, ecosystem management, civilization building, economics, markets, government, warfare, exploration, business, city building, family or individual life, scientific experimentation, alternate history, spaceflight, or other forms of play that emerge from the simulated systems.
+
+Different experiences should share authoritative underlying world state rather than becoming disconnected games with incompatible versions of reality.
+
+This is a design horizon, not a requirement to build every possible game mode now.
+
 - Procedural planets
 - Biomes
 - Resources
@@ -246,8 +256,16 @@ This breadth is a long-term design target, not a requirement to implement all do
 - Trade
 - Conflict
 - Migration
+- Economies
+- Markets
+- Organizations and firms
+- Households
+- Persistent individual agents
+- Exploration
+- Spaceflight
 - Emergent events
 - Player interventions
+- Multiple styles of play over shared simulation state
 
 ## Increased Resolution
 
