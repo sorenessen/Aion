@@ -126,12 +126,12 @@ Goal:
 
 World history becomes inspectable and forkable.
 
-- [ ] Append-only event history
-- [ ] Simulation checkpoints
-- [ ] Reset to initial state
-- [ ] Fork timeline from checkpoint
-- [ ] Parent and child timeline identity
-- [ ] Preserve immutable history semantics
+- [x] Append-only event history
+- [x] Simulation checkpoints
+- [x] Reset to initial state
+- [x] Fork timeline from checkpoint
+- [x] Parent and child timeline identity
+- [x] Preserve immutable history semantics
 
 Principle:
 
