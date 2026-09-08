@@ -4,6 +4,8 @@ using Aion.Persistence.Archives;
 using Aion.Persistence.Storage;
 using Aion.Application.Sessions;
 using Aion.Application.Worlds;
+using Aion.Simulation.Climate;
+using Aion.Simulation.Definitions;
 using Aion.Simulation.Planets;
 using Aion.Simulation.Time;
 using Aion.Simulation.Timelines;
@@ -118,8 +120,43 @@ app.MapPost(
             var world =
                 WorldFactory.Create(specification);
 
+            var energyBalanceModels =
+                request.Planets
+                    .Select(
+                        (planet, index) =>
+                            planet.EnergyBalanceModel is null
+                                ? null
+                                : new PlanetaryEnergyBalanceModelDefinition(
+                                    world.Planets[index].Id,
+                                    new PlanetaryEnergyBalanceParameters(
+                                        planet.EnergyBalanceModel
+                                            .StellarFluxWattsPerSquareMeter,
+                                        planet.EnergyBalanceModel
+                                            .EffectiveLongwaveEmissivity,
+                                        planet.EnergyBalanceModel
+                                            .EffectiveHeatCapacityJoulesPerSquareMeterKelvin,
+                                        planet.EnergyBalanceModel
+                                            .IceFreeAlbedo,
+                                        planet.EnergyBalanceModel
+                                            .IceAlbedo,
+                                        planet.EnergyBalanceModel
+                                            .FullIceTemperatureKelvin,
+                                        planet.EnergyBalanceModel
+                                            .IceFreeTemperatureKelvin,
+                                        planet.EnergyBalanceModel
+                                            .IceResponseTimescaleSeconds)))
+                    .Where(model => model is not null)
+                    .Cast<PlanetaryEnergyBalanceModelDefinition>()
+                    .ToArray();
+
+            var definition =
+                new SimulationDefinition(
+                    energyBalanceModels);
+
             var sessionId =
-                manager.Create(world);
+                manager.Create(
+                    world,
+                    definition);
 
             var session =
                 manager.Get(sessionId);
@@ -164,6 +201,31 @@ app.MapGet(
             ToResponse(
                 sessionId,
                 session));
+    });
+
+app.MapGet(
+    "/sessions/{id:guid}/definition",
+    (
+        Guid id,
+        SimulationSessionManager manager) =>
+    {
+        if (id == Guid.Empty)
+            return Results.NotFound();
+
+        var sessionId =
+            new SimulationSessionId(id);
+
+        if (!manager.TryGet(
+                sessionId,
+                out var session) ||
+            session is null)
+        {
+            return Results.NotFound();
+        }
+
+        return Results.Ok(
+            ToDefinitionResponse(
+                session.Definition));
     });
 
 app.MapGet(
@@ -519,6 +581,32 @@ static WorldResponse ToWorldResponse(
                                 planet.Environment.Atmosphere.SurfacePressurePascals,
                                 planet.Environment.Atmosphere
                                     .CompositionByMoleFraction))))
+            .ToArray());
+}
+
+static SimulationDefinitionResponse ToDefinitionResponse(
+    SimulationDefinition definition)
+{
+    return new SimulationDefinitionResponse(
+        definition.PlanetaryEnergyBalanceModels
+            .Select(
+                model =>
+                    new PlanetaryEnergyBalanceModelResponse(
+                        model.PlanetId.Value,
+                        model.Parameters
+                            .StellarFluxWattsPerSquareMeter,
+                        model.Parameters
+                            .EffectiveLongwaveEmissivity,
+                        model.Parameters
+                            .EffectiveHeatCapacityJoulesPerSquareMeterKelvin,
+                        model.Parameters.IceFreeAlbedo,
+                        model.Parameters.IceAlbedo,
+                        model.Parameters
+                            .FullIceTemperatureKelvin,
+                        model.Parameters
+                            .IceFreeTemperatureKelvin,
+                        model.Parameters
+                            .IceResponseTimescaleSeconds))
             .ToArray());
 }
 

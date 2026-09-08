@@ -931,4 +931,252 @@ public sealed class SessionEndpointTests
         Assert.Single(timeline.Checkpoints);
     }
 
+
+    [Fact]
+    public async Task CreateAndAdvance_WithEnergyBalanceModelChangesPlanet()
+    {
+        await using var factory =
+            new WebApplicationFactory<Program>();
+
+        using var client =
+            factory.CreateClient();
+
+        var request =
+            new CreateSessionRequest(
+            [
+                new PlanetCreationRequest(
+                    "Earth",
+                    5.9722e24,
+                    6_371_000,
+                    new PlanetEnvironmentCreationRequest(
+                        288.15,
+                        0.71,
+                        0.03,
+                        new AtmosphereCreationRequest(
+                            0,
+                            new Dictionary<string, double>())),
+                    new PlanetaryEnergyBalanceModelRequest(
+                        1361,
+                        0.61,
+                        1.0e8,
+                        0.30,
+                        0.60,
+                        263.15,
+                        273.15,
+                        31_536_000))
+            ]);
+
+        var createResponse =
+            await client.PostAsJsonAsync(
+                "/sessions",
+                request);
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            createResponse.StatusCode);
+
+        var created =
+            await createResponse.Content
+                .ReadFromJsonAsync<SessionResponse>();
+
+        Assert.NotNull(created);
+
+        var before =
+            await client.GetFromJsonAsync<WorldResponse>(
+                $"/sessions/{created.SessionId}/world");
+
+        Assert.NotNull(before);
+
+        var originalPlanet =
+            Assert.Single(before.Planets);
+
+        var advanceResponse =
+            await client.PostAsJsonAsync(
+                $"/sessions/{created.SessionId}/advance",
+                new AdvanceTimeRequest(3600));
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            advanceResponse.StatusCode);
+
+        var advanced =
+            await advanceResponse.Content
+                .ReadFromJsonAsync<SessionResponse>();
+
+        Assert.NotNull(advanced);
+        Assert.Equal(3600, advanced.CurrentTimeSeconds);
+        Assert.Equal(1, advanced.EventCount);
+
+        var after =
+            await client.GetFromJsonAsync<WorldResponse>(
+                $"/sessions/{created.SessionId}/world");
+
+        Assert.NotNull(after);
+
+        var changedPlanet =
+            Assert.Single(after.Planets);
+
+        Assert.Equal(
+            originalPlanet.PlanetId,
+            changedPlanet.PlanetId);
+
+        Assert.NotEqual(
+            originalPlanet.Environment
+                .MeanSurfaceTemperatureKelvin,
+            changedPlanet.Environment
+                .MeanSurfaceTemperatureKelvin);
+
+        Assert.NotEqual(
+            originalPlanet.Environment
+                .IceCoverageFraction,
+            changedPlanet.Environment
+                .IceCoverageFraction);
+    }
+
+
+
+    [Fact]
+    public async Task DefinitionResource_ReturnsConfiguredEnergyBalanceModel()
+    {
+        await using var factory =
+            new WebApplicationFactory<Program>();
+
+        using var client =
+            factory.CreateClient();
+
+        var request =
+            new CreateSessionRequest(
+            [
+                new PlanetCreationRequest(
+                    "Earth",
+                    5.9722e24,
+                    6_371_000,
+                    new PlanetEnvironmentCreationRequest(
+                        288.15,
+                        0.71,
+                        0.03,
+                        new AtmosphereCreationRequest(
+                            0,
+                            new Dictionary<string, double>())),
+                    new PlanetaryEnergyBalanceModelRequest(
+                        1361,
+                        0.61,
+                        1.0e8,
+                        0.30,
+                        0.60,
+                        263.15,
+                        273.15,
+                        31_536_000))
+            ]);
+
+        var created =
+            await (await client.PostAsJsonAsync(
+                    "/sessions",
+                    request))
+                .Content
+                .ReadFromJsonAsync<SessionResponse>();
+
+        Assert.NotNull(created);
+
+        var world =
+            await client.GetFromJsonAsync<WorldResponse>(
+                $"/sessions/{created.SessionId}/world");
+
+        var definition =
+            await client.GetFromJsonAsync<
+                SimulationDefinitionResponse>(
+                $"/sessions/{created.SessionId}/definition");
+
+        Assert.NotNull(world);
+        Assert.NotNull(definition);
+
+        var planet =
+            Assert.Single(world.Planets);
+
+        var model =
+            Assert.Single(
+                definition.PlanetaryEnergyBalanceModels);
+
+        Assert.Equal(
+            planet.PlanetId,
+            model.PlanetId);
+
+        Assert.Equal(
+            1361,
+            model.StellarFluxWattsPerSquareMeter);
+
+        Assert.Equal(
+            0.61,
+            model.EffectiveLongwaveEmissivity);
+
+        Assert.Equal(
+            1.0e8,
+            model.EffectiveHeatCapacityJoulesPerSquareMeterKelvin);
+
+        Assert.Equal(
+            0.30,
+            model.IceFreeAlbedo);
+
+        Assert.Equal(
+            0.60,
+            model.IceAlbedo);
+
+        Assert.Equal(
+            263.15,
+            model.FullIceTemperatureKelvin);
+
+        Assert.Equal(
+            273.15,
+            model.IceFreeTemperatureKelvin);
+
+        Assert.Equal(
+            31_536_000,
+            model.IceResponseTimescaleSeconds);
+    }
+
+    [Fact]
+    public async Task Create_WithInvalidEnergyBalanceModel_ReturnsBadRequest()
+    {
+        await using var factory =
+            new WebApplicationFactory<Program>();
+
+        using var client =
+            factory.CreateClient();
+
+        var request =
+            new CreateSessionRequest(
+            [
+                new PlanetCreationRequest(
+                    "Earth",
+                    5.9722e24,
+                    6_371_000,
+                    new PlanetEnvironmentCreationRequest(
+                        288.15,
+                        0.71,
+                        0.03,
+                        new AtmosphereCreationRequest(
+                            0,
+                            new Dictionary<string, double>())),
+                    new PlanetaryEnergyBalanceModelRequest(
+                        1361,
+                        0.61,
+                        0,
+                        0.30,
+                        0.60,
+                        263.15,
+                        273.15,
+                        31_536_000))
+            ]);
+
+        var response =
+            await client.PostAsJsonAsync(
+                "/sessions",
+                request);
+
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            response.StatusCode);
+    }
+
+
 }

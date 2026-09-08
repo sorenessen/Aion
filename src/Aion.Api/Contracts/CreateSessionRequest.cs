@@ -14,7 +14,26 @@ public sealed record PlanetCreationRequest(
     [property: JsonRequired]
     double MeanRadiusMeters,
     [property: JsonRequired]
-    PlanetEnvironmentCreationRequest Environment);
+    PlanetEnvironmentCreationRequest Environment,
+    PlanetaryEnergyBalanceModelRequest? EnergyBalanceModel = null);
+
+public sealed record PlanetaryEnergyBalanceModelRequest(
+    [property: JsonRequired]
+    double StellarFluxWattsPerSquareMeter,
+    [property: JsonRequired]
+    double EffectiveLongwaveEmissivity,
+    [property: JsonRequired]
+    double EffectiveHeatCapacityJoulesPerSquareMeterKelvin,
+    [property: JsonRequired]
+    double IceFreeAlbedo,
+    [property: JsonRequired]
+    double IceAlbedo,
+    [property: JsonRequired]
+    double FullIceTemperatureKelvin,
+    [property: JsonRequired]
+    double IceFreeTemperatureKelvin,
+    [property: JsonRequired]
+    double IceResponseTimescaleSeconds);
 
 public sealed record PlanetEnvironmentCreationRequest(
     [property: JsonRequired]
