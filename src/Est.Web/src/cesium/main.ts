@@ -1,5 +1,6 @@
 import 'cesium/Build/Cesium/Widgets/widgets.css'
 import '../style.css'
+import { EstApi } from '../api/est-api'
 
 import {
   Cartesian3,
@@ -44,6 +45,7 @@ app.innerHTML = `
       <button id="landCoverButton" type="button">Land Cover</button>
     </div>
 
+    <div id="sessionStatus">No simulation session selected.</div>
   </section>
 `
 
@@ -117,6 +119,32 @@ const landCoverButton =
 
 const lookLabel =
   requireElement<HTMLSpanElement>('#lookLabel')
+
+const sessionStatus =
+  requireElement<HTMLDivElement>('#sessionStatus')
+
+const sessionId =
+  new URLSearchParams(window.location.search).get('session')
+
+if (sessionId) {
+  const api = new EstApi('/api')
+
+  try {
+    const [session, world] = await Promise.all([
+      api.getSession(sessionId),
+      api.getWorld(sessionId),
+    ])
+
+    const planet = world.planets[0]
+
+    sessionStatus.textContent = planet
+      ? `${planet.name} · ${planet.environment.meanSurfaceTemperatureKelvin.toFixed(2)} K · t=${session.currentTimeSeconds}s`
+      : `Session ${session.sessionId} · no planets`
+  } catch (error) {
+    console.error(error)
+    sessionStatus.textContent = 'Simulation session could not be loaded.'
+  }
+}
 
 const ramp = document.createElement('canvas')
 ramp.width = 256

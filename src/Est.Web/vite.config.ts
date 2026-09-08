@@ -25,6 +25,15 @@ export default defineConfig({
   define: {
     CESIUM_BASE_URL: JSON.stringify('/cesium-assets'),
   },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5026',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
+  },
   build: {
     rolldownOptions: {
       input: {

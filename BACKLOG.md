@@ -186,8 +186,8 @@ TypeScript web application with Babylon.js or another browser-native renderer se
 - [x] Zoom controls
 - [ ] Basic lighting
 - [ ] Basic generated or placeholder surface
-- [ ] Fetch authoritative world state from API
-- [ ] Display core planetary values
+- [x] Fetch authoritative world state from API
+- [x] Display core planetary values
 - [ ] Pause
 - [ ] 1x
 - [ ] 10x
