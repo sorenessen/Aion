@@ -46,7 +46,12 @@ public sealed record PlanetState
 
     public string Name { get; init; }
 
-    public double MassKilograms { get; init; }
+    public double MassKilograms { get; private init; }
 
-    public double MeanRadiusMeters { get; init; }
+    public double MeanRadiusMeters { get; private init; }
+
+    public double SurfaceGravityMetersPerSecondSquared =>
+        PlanetPhysics.CalculateSurfaceGravity(
+            MassKilograms,
+            MeanRadiusMeters);
 }
