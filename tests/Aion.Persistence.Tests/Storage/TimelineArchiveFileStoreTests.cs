@@ -145,6 +145,64 @@ public class TimelineArchiveFileStoreTests
     }
 
     [Fact]
+    public void SaveNew_RejectsExistingArchiveWithoutChangingIt()
+    {
+        var path = CreateTempPath();
+
+        try
+        {
+            var store =
+                new TimelineArchiveFileStore();
+
+            var first =
+                CreateTimelineWithHistory();
+
+            var second =
+                SimulationTimeline.Create(
+                    new WorldState(
+                        WorldId.New(),
+                        new SimulationTime(999)));
+
+            store.SaveNew(
+                path,
+                first,
+                CreateProvenance());
+
+            var originalJson =
+                File.ReadAllText(path);
+
+            Assert.Throws<IOException>(
+                () => store.SaveNew(
+                    path,
+                    second,
+                    CreateProvenance()));
+
+            Assert.Equal(
+                originalJson,
+                File.ReadAllText(path));
+
+            var restored =
+                store.Load(path);
+
+            Assert.Equal(
+                first.Id,
+                restored.Timeline.Id);
+
+            var directory =
+                Path.GetDirectoryName(path)!;
+
+            Assert.Empty(
+                Directory.GetFiles(
+                    directory,
+                    Path.GetFileName(path) + ".*.tmp"));
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
+    [Fact]
     public void Load_RejectsCorruptArchive()
     {
         var path = CreateTempPath();

@@ -157,15 +157,18 @@ Goal:
 
 Expose simulation operations without coupling the engine to presentation.
 
-- [ ] Create Aion.Api
-- [ ] World creation endpoint
-- [ ] World-state endpoint
-- [ ] Advance-time endpoint
-- [ ] Pause and resume semantics
-- [ ] Intervention endpoint
-- [ ] Timeline endpoint
-- [ ] Persistence boundary
-- [ ] API integration tests
+- [x] Create Aion.Api
+- [x] World creation endpoint
+- [x] World-state endpoint
+- [x] Advance-time endpoint
+- [x] Pause and resume semantics
+- [x] Intervention endpoint
+- [x] Timeline endpoint
+- [x] Persistence boundary
+- [x] API integration tests
+
+Acceptance: 202 tests passing. API creation, inspection, advancement,
+intervention, and archive round trips are verified.
 
 ## Phase 7 - First Globe
 

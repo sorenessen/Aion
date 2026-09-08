@@ -36,8 +36,7 @@ public sealed record ReplacePlanetEnvironmentOperation
 
         if (planet is null)
         {
-            throw new InvalidOperationException(
-                "The planet does not exist in this world.");
+            throw new PlanetNotFoundException(PlanetId);
         }
 
         var replacement = new PlanetState(

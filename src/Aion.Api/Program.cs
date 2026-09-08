@@ -1,0 +1,546 @@
+using Aion.Api;
+using Aion.Api.Contracts;
+using Aion.Persistence.Archives;
+using Aion.Persistence.Storage;
+using Aion.Application.Sessions;
+using Aion.Application.Worlds;
+using Aion.Simulation.Planets;
+using Aion.Simulation.Time;
+using Aion.Simulation.Timelines;
+using Aion.Simulation.Worlds;
+
+var builder =
+    WebApplication.CreateBuilder(args);
+
+builder.Services.AddSingleton<
+    SimulationSessionManager>();
+
+builder.Services.AddSingleton<
+    TimelineArchiveFileStore>();
+
+builder.Services.AddSingleton<
+    SimulationSessionArchiveService>();
+
+builder.Services.AddSingleton(
+    new SessionArchiveLocation(
+        builder.Configuration["Aion:ArchiveDirectory"]
+        ?? Path.Combine(
+            builder.Environment.ContentRootPath,
+            "archives")));
+
+var app =
+    builder.Build();
+
+app.MapPost(
+    "/sessions",
+    (
+        CreateSessionRequest request,
+        SimulationSessionManager manager) =>
+    {
+        if (request.Planets is null)
+        {
+            return Results.BadRequest(
+                new
+                {
+                    error =
+                        "Planets collection is required."
+                });
+        }
+
+        for (var index = 0; index < request.Planets.Length; index++)
+        {
+            var planet = request.Planets[index];
+
+            if (planet is null)
+            {
+                return Results.BadRequest(
+                    new
+                    {
+                        error = $"Planets[{index}] is required."
+                    });
+            }
+
+            if (planet.Environment is null)
+            {
+                return Results.BadRequest(
+                    new
+                    {
+                        error = $"Planets[{index}].Environment is required."
+                    });
+            }
+
+            if (planet.Environment.Atmosphere is null)
+            {
+                return Results.BadRequest(
+                    new
+                    {
+                        error = $"Planets[{index}].Environment.Atmosphere is required."
+                    });
+            }
+
+            if (planet.Environment.Atmosphere.CompositionByMoleFraction is null)
+            {
+                return Results.BadRequest(
+                    new
+                    {
+                        error = $"Planets[{index}].Environment.Atmosphere.CompositionByMoleFraction is required."
+                    });
+            }
+        }
+
+        try
+        {
+            var specification =
+                new WorldCreationSpecification(
+                    request.Planets
+                        .Select(
+                            planet =>
+                                new PlanetCreationSpecification(
+                                    planet.Name,
+                                    planet.MassKilograms,
+                                    planet.MeanRadiusMeters,
+                                    new PlanetEnvironmentCreationSpecification(
+                                        planet.Environment
+                                            .MeanSurfaceTemperatureKelvin,
+                                        planet.Environment
+                                            .SurfaceWaterFraction,
+                                        planet.Environment
+                                            .IceCoverageFraction,
+                                        new AtmosphereCreationSpecification(
+                                            planet.Environment
+                                                .Atmosphere
+                                                .SurfacePressurePascals,
+                                            planet.Environment
+                                                .Atmosphere
+                                                .CompositionByMoleFraction))))
+                        .ToArray());
+
+            var world =
+                WorldFactory.Create(specification);
+
+            var sessionId =
+                manager.Create(world);
+
+            var session =
+                manager.Get(sessionId);
+
+            return Results.Created(
+                $"/sessions/{sessionId.Value}",
+                ToResponse(
+                    sessionId,
+                    session));
+        }
+        catch (ArgumentException exception)
+        {
+            return Results.BadRequest(
+                new
+                {
+                    error = exception.Message
+                });
+        }
+    });
+
+app.MapGet(
+    "/sessions/{id:guid}",
+    (
+        Guid id,
+        SimulationSessionManager manager) =>
+    {
+        if (id == Guid.Empty)
+            return Results.NotFound();
+
+        var sessionId =
+            new SimulationSessionId(id);
+
+        if (!manager.TryGet(
+                sessionId,
+                out var session) ||
+            session is null)
+        {
+            return Results.NotFound();
+        }
+
+        return Results.Ok(
+            ToResponse(
+                sessionId,
+                session));
+    });
+
+app.MapGet(
+    "/sessions/{id:guid}/world",
+    (
+        Guid id,
+        SimulationSessionManager manager) =>
+    {
+        if (id == Guid.Empty)
+            return Results.NotFound();
+
+        var sessionId =
+            new SimulationSessionId(id);
+
+        if (!manager.TryGet(
+                sessionId,
+                out var session) ||
+            session is null)
+        {
+            return Results.NotFound();
+        }
+
+        return Results.Ok(
+            ToWorldResponse(
+                session.CurrentWorld));
+    });
+
+app.MapGet(
+    "/sessions/{id:guid}/timeline",
+    (
+        Guid id,
+        SimulationSessionManager manager) =>
+    {
+        if (id == Guid.Empty)
+            return Results.NotFound();
+
+        var sessionId =
+            new SimulationSessionId(id);
+
+        if (!manager.TryGet(
+                sessionId,
+                out var session) ||
+            session is null)
+        {
+            return Results.NotFound();
+        }
+
+        return Results.Ok(
+            ToTimelineResponse(
+                session.Timeline));
+    });
+
+app.MapPost(
+    "/sessions/{id:guid}/pause",
+    (
+        Guid id,
+        SimulationSessionManager manager) =>
+    {
+        if (id == Guid.Empty)
+            return Results.NotFound();
+
+        var sessionId =
+            new SimulationSessionId(id);
+
+        if (!manager.TryGet(
+                sessionId,
+                out var session) ||
+            session is null)
+        {
+            return Results.NotFound();
+        }
+
+        session.Pause();
+
+        return Results.Ok(
+            ToResponse(
+                sessionId,
+                session));
+    });
+
+app.MapPost(
+    "/sessions/{id:guid}/resume",
+    (
+        Guid id,
+        SimulationSessionManager manager) =>
+    {
+        if (id == Guid.Empty)
+            return Results.NotFound();
+
+        var sessionId =
+            new SimulationSessionId(id);
+
+        if (!manager.TryGet(
+                sessionId,
+                out var session) ||
+            session is null)
+        {
+            return Results.NotFound();
+        }
+
+        session.Resume();
+
+        return Results.Ok(
+            ToResponse(
+                sessionId,
+                session));
+    });
+
+app.MapPost(
+    "/sessions/{id:guid}/planets/{planetId:guid}/environment",
+    (
+        Guid id,
+        Guid planetId,
+        ReplacePlanetEnvironmentRequest request,
+        SimulationSessionManager manager) =>
+    {
+        if (id == Guid.Empty ||
+            planetId == Guid.Empty)
+        {
+            return Results.NotFound();
+        }
+
+        var sessionId =
+            new SimulationSessionId(id);
+
+        if (!manager.TryGet(
+                sessionId,
+                out var session) ||
+            session is null)
+        {
+            return Results.NotFound();
+        }
+
+        if (request.Atmosphere is null)
+        {
+            return Results.BadRequest(
+                new
+                {
+                    error = "Atmosphere is required."
+                });
+        }
+
+        if (request.Atmosphere.CompositionByMoleFraction is null)
+        {
+            return Results.BadRequest(
+                new
+                {
+                    error =
+                        "Atmosphere composition is required."
+                });
+        }
+
+        try
+        {
+            var environment =
+                new PlanetEnvironment(
+                    request.MeanSurfaceTemperatureKelvin,
+                    request.SurfaceWaterFraction,
+                    request.IceCoverageFraction,
+                    new AtmosphereState(
+                        request.Atmosphere
+                            .SurfacePressurePascals,
+                        request.Atmosphere
+                            .CompositionByMoleFraction));
+
+            session.ReplacePlanetEnvironment(
+                new PlanetId(planetId),
+                environment);
+
+            return Results.Ok(
+                ToWorldResponse(
+                    session.CurrentWorld));
+        }
+        catch (ArgumentException exception)
+        {
+            return Results.BadRequest(
+                new
+                {
+                    error = exception.Message
+                });
+        }
+        catch (PlanetNotFoundException)
+        {
+            return Results.NotFound();
+        }
+    });
+
+app.MapPost(
+    "/sessions/{id:guid}/advance",
+    (
+        Guid id,
+        AdvanceTimeRequest request,
+        SimulationSessionManager manager) =>
+    {
+        if (id == Guid.Empty)
+            return Results.NotFound();
+
+        if (request.Seconds < 0)
+        {
+            return Results.BadRequest(
+                new
+                {
+                    error =
+                        "Simulation time cannot advance by a negative duration."
+                });
+        }
+
+        var sessionId =
+            new SimulationSessionId(id);
+
+        if (!manager.TryGet(
+                sessionId,
+                out var session) ||
+            session is null)
+        {
+            return Results.NotFound();
+        }
+
+        try
+        {
+            session.Advance(
+                request.Seconds);
+        }
+        catch (OverflowException)
+        {
+            return Results.BadRequest(
+                new
+                {
+                    error =
+                        "Requested advancement exceeds the supported simulation time range."
+                });
+        }
+
+        return Results.Ok(
+            ToResponse(
+                sessionId,
+                session));
+    });
+
+app.MapPost(
+    "/sessions/{id:guid}/archives",
+    (
+        Guid id,
+        SimulationSessionManager manager,
+        SimulationSessionArchiveService archives,
+        SessionArchiveLocation location) =>
+    {
+        if (id == Guid.Empty)
+            return Results.NotFound();
+
+        var sessionId = new SimulationSessionId(id);
+
+        if (!manager.TryGet(sessionId, out var session) ||
+            session is null)
+        {
+            return Results.NotFound();
+        }
+
+        var archiveId = Guid.NewGuid();
+
+        var timeline = archives.Save(
+            sessionId,
+            location.GetPath(archiveId),
+            new TimelineArchiveProvenance(
+                "Aion",
+                "0.1.0-alpha",
+                "simulation"));
+
+        return Results.Created(
+            $"/archives/{archiveId}",
+            new ArchiveResponse(
+                archiveId,
+                timeline.CurrentWorld.Id.Value,
+                timeline.Id.Value));
+    });
+
+app.MapPost(
+    "/archives/{archiveId:guid}/load",
+    (
+        Guid archiveId,
+        SimulationSessionManager manager,
+        SimulationSessionArchiveService archives,
+        SessionArchiveLocation location) =>
+    {
+        if (archiveId == Guid.Empty)
+            return Results.NotFound();
+
+        var path = location.GetPath(archiveId);
+
+        if (!File.Exists(path))
+            return Results.NotFound();
+
+        var sessionId = archives.Load(path);
+        var session = manager.Get(sessionId);
+
+        return Results.Created(
+            $"/sessions/{sessionId.Value}",
+            ToResponse(sessionId, session));
+    });
+
+app.Run();
+
+static TimelineResponse ToTimelineResponse(
+    SimulationTimeline timeline)
+{
+    return new TimelineResponse(
+        timeline.Id.Value,
+        timeline.CurrentWorld.Id.Value,
+        timeline.ParentTimelineId?.Value,
+        timeline.ParentCheckpointId,
+        timeline.CurrentWorld.CurrentTime.TotalSeconds,
+        timeline.Checkpoints
+            .Select(
+                checkpoint =>
+                    new CheckpointResponse(
+                        checkpoint.Id,
+                        checkpoint.Time.TotalSeconds))
+            .ToArray(),
+        timeline.Events
+            .Select(
+                timelineEvent =>
+                    new TimelineEventResponse(
+                        timelineEvent.Id,
+                        timelineEvent.OccurredAt.TotalSeconds,
+                        timelineEvent.Cause,
+                        timelineEvent.Summary,
+                        timelineEvent.AffectedPlanetId?.Value,
+                        timelineEvent.ElapsedSeconds,
+                        timelineEvent.Metrics))
+            .ToArray());
+}
+
+static WorldResponse ToWorldResponse(
+    WorldState world)
+{
+    return new WorldResponse(
+        world.Id.Value,
+        world.CurrentTime.TotalSeconds,
+        world.Planets
+            .Select(
+                planet =>
+                    new PlanetResponse(
+                        planet.Id.Value,
+                        planet.Name,
+                        planet.MassKilograms,
+                        planet.MeanRadiusMeters,
+                        planet.SurfaceGravityMetersPerSecondSquared,
+                        new PlanetEnvironmentResponse(
+                            planet.Environment.MeanSurfaceTemperatureKelvin,
+                            planet.Environment.SurfaceWaterFraction,
+                            planet.Environment.IceCoverageFraction,
+                            new AtmosphereResponse(
+                                planet.Environment.Atmosphere.SurfacePressurePascals,
+                                planet.Environment.Atmosphere
+                                    .CompositionByMoleFraction))))
+            .ToArray());
+}
+
+static SessionResponse ToResponse(
+    SimulationSessionId sessionId,
+    SimulationSession session)
+{
+    var timeline =
+        session.Timeline;
+
+    var world =
+        timeline.CurrentWorld;
+
+    return new SessionResponse(
+        sessionId.Value,
+        world.Id.Value,
+        timeline.Id.Value,
+        world.CurrentTime.TotalSeconds,
+        session.IsPaused,
+        world.Planets.Length,
+        timeline.Events.Length,
+        timeline.Checkpoints.Length);
+}
+
+public partial class Program;

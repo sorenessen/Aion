@@ -72,7 +72,7 @@ public class SimulationOperationTests
                 0,
                 AtmosphereState.Vacuum));
 
-        Assert.Throws<InvalidOperationException>(
+        Assert.Throws<PlanetNotFoundException>(
             () => SimulationOperationExecutor.Apply(
                 world,
                 operation));

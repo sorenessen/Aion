@@ -10,6 +10,31 @@ public sealed class TimelineArchiveFileStore
         SimulationTimeline timeline,
         TimelineArchiveProvenance provenance)
     {
+        SaveCore(
+            path,
+            timeline,
+            provenance,
+            overwrite: true);
+    }
+
+    public void SaveNew(
+        string path,
+        SimulationTimeline timeline,
+        TimelineArchiveProvenance provenance)
+    {
+        SaveCore(
+            path,
+            timeline,
+            provenance,
+            overwrite: false);
+    }
+
+    private static void SaveCore(
+        string path,
+        SimulationTimeline timeline,
+        TimelineArchiveProvenance provenance,
+        bool overwrite)
+    {
         if (string.IsNullOrWhiteSpace(path))
         {
             throw new ArgumentException(
@@ -48,7 +73,7 @@ public sealed class TimelineArchiveFileStore
             File.Move(
                 tempPath,
                 fullPath,
-                overwrite: true);
+                overwrite);
         }
         finally
         {

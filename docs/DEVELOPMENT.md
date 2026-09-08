@@ -14,7 +14,7 @@ From the repository root:
 dotnet test Aion.slnx
 ```
 
-Latest verified result at this update: 155 passed, 0 failed.
+Latest verified result at this update: 202 passed, 0 failed.
 
 ## Repository Inspection
 
@@ -40,7 +40,15 @@ Review the ZIP before sharing it. Ignore rules cannot guarantee that every untra
 
 ## Run and Debug
 
-Aion does not yet have a user-facing executable, API, or browser client. Add actual run, debug, configuration, and local-service commands when validated.
+Aion now has a headless API project and no browser client. The API
+provides explicit world/session operations and server-owned archive storage.
+The archive directory defaults to the API content root's `archives` directory
+and can be configured through `Aion:ArchiveDirectory`.
+
+The API has been exercised through integration tests. A standalone local
+run/debug procedure has not yet been validated on the user's machine.
+Add the actual launch command, address, and manual smoke-test procedure
+after validating them. Do not treat an assumed port as a verified endpoint.
 
 ## Release Procedures
 
