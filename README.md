@@ -66,3 +66,23 @@ The simulation engine must remain independent of rendering.
 A world must be able to exist, advance, save, load, and be tested without any graphical client.
 
 Est should preserve architectural escape hatches. Existing implementation decisions are not sacred if they begin to materially constrain performance, maintainability, reliability, scientific integrity, or future product possibilities.
+
+## Current Rendering Evaluation
+
+Phase 7 is evaluating CesiumJS alongside the preserved Babylon prototype.
+Cesium is a serious candidate, not a final renderer selection.
+
+The browser evaluation now reads authoritative simulation state through
+Est.Api and renders a real regional surface derived from USGS Annual NLCD
+Land Cover 2025. The validated pipeline is:
+
+USGS categorical raster -> Est surface categories -> geographic raster
+-> Cesium terrain draping.
+
+The Olympia/Puget Sound/Mount Rainier evaluation confirms geographic
+alignment, terrain relief, coastline placement, and snow/ice coverage.
+The current 1,800-pixel preview and rectangular coverage are diagnostic,
+not the final surface appearance or level-of-detail strategy.
+
+See `docs/DEVELOPMENT.md` for development commands and
+`docs/SURFACE_EVALUATION.md` for the data pipeline and next steps.

@@ -1,0 +1,126 @@
+{
+  "version": 1,
+  "categories": {
+    "Unknown": {
+      "id": 0,
+      "value": "unknown",
+      "previewRgba": [0, 0, 0, 0]
+    },
+    "OpenWater": {
+      "id": 1,
+      "value": "open-water",
+      "previewRgba": [45, 105, 160, 255]
+    },
+    "Developed": {
+      "id": 2,
+      "value": "developed",
+      "previewRgba": [130, 125, 120, 255]
+    },
+    "Barren": {
+      "id": 3,
+      "value": "barren",
+      "previewRgba": [186, 164, 122, 255]
+    },
+    "Forest": {
+      "id": 4,
+      "value": "forest",
+      "previewRgba": [54, 104, 63, 255]
+    },
+    "Shrubland": {
+      "id": 5,
+      "value": "shrubland",
+      "previewRgba": [104, 124, 75, 255]
+    },
+    "Grassland": {
+      "id": 6,
+      "value": "grassland",
+      "previewRgba": [137, 157, 91, 255]
+    },
+    "Agriculture": {
+      "id": 7,
+      "value": "agriculture",
+      "previewRgba": [190, 169, 92, 255]
+    },
+    "Wetland": {
+      "id": 8,
+      "value": "wetland",
+      "previewRgba": [71, 126, 116, 255]
+    },
+    "SnowIce": {
+      "id": 9,
+      "value": "snow-ice",
+      "previewRgba": [235, 238, 236, 255]
+    }
+  },
+  "sources": {
+    "nlcd": {
+      "product": "USGS Annual NLCD Land Cover",
+      "classes": {
+        "11": {
+          "label": "Open Water",
+          "category": "OpenWater"
+        },
+        "12": {
+          "label": "Perennial Snow/Ice",
+          "category": "SnowIce"
+        },
+        "21": {
+          "label": "Developed, Open Space",
+          "category": "Developed"
+        },
+        "22": {
+          "label": "Developed, Low Intensity",
+          "category": "Developed"
+        },
+        "23": {
+          "label": "Developed, Medium Intensity",
+          "category": "Developed"
+        },
+        "24": {
+          "label": "Developed, High Intensity",
+          "category": "Developed"
+        },
+        "31": {
+          "label": "Barren Land",
+          "category": "Barren"
+        },
+        "41": {
+          "label": "Deciduous Forest",
+          "category": "Forest"
+        },
+        "42": {
+          "label": "Evergreen Forest",
+          "category": "Forest"
+        },
+        "43": {
+          "label": "Mixed Forest",
+          "category": "Forest"
+        },
+        "52": {
+          "label": "Shrub/Scrub",
+          "category": "Shrubland"
+        },
+        "71": {
+          "label": "Herbaceous",
+          "category": "Grassland"
+        },
+        "81": {
+          "label": "Hay/Pasture",
+          "category": "Agriculture"
+        },
+        "82": {
+          "label": "Cultivated Crops",
+          "category": "Agriculture"
+        },
+        "90": {
+          "label": "Woody Wetlands",
+          "category": "Wetland"
+        },
+        "95": {
+          "label": "Emergent Herbaceous Wetlands",
+          "category": "Wetland"
+        }
+      }
+    }
+  }
+}

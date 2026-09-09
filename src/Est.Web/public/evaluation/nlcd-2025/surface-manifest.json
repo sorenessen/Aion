@@ -1,0 +1,31 @@
+{
+  "surfaceCategoryDefinitionVersion": 1,
+  "source": {
+    "product": "USGS Annual NLCD Land Cover",
+    "year": 2025,
+    "collection": "1.2"
+  },
+  "geographicPreview": {
+    "crs": "EPSG:4326",
+    "width": 1800,
+    "height": 1053,
+    "transform": [
+      0.001449139073201104,
+      0.0,
+      -123.61633988971845,
+      0.0,
+      -0.0014490958166095632,
+      47.76234468508979,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "bounds": {
+      "west": -123.61633988971845,
+      "south": 46.23644679019992,
+      "east": -121.00788955795646,
+      "north": 47.76234468508979
+    },
+    "note": "North-up geographic diagnostic preview. Nearest-neighbor reprojection preserves categorical boundaries. Palette is not final Est art direction."
+  }
+}

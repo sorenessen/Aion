@@ -10,6 +10,7 @@ import {
   Ion,
   Material,
   Rectangle,
+  SingleTileImageryProvider,
   Viewer,
   WebMapServiceImageryProvider,
 } from 'cesium'
@@ -43,6 +44,7 @@ app.innerHTML = `
       <button id="baselineButton" type="button">Baseline</button>
       <button id="estButton" type="button">Terrain Study</button>
       <button id="landCoverButton" type="button">Land Cover</button>
+      <button id="estSurfaceButton" type="button">Est Surface Study</button>
     </div>
 
     <div id="sessionStatus">No simulation session selected.</div>
@@ -117,6 +119,9 @@ const estButton =
 const landCoverButton =
   requireElement<HTMLButtonElement>('#landCoverButton')
 
+const estSurfaceButton =
+  requireElement<HTMLButtonElement>('#estSurfaceButton')
+
 const lookLabel =
   requireElement<HTMLSpanElement>('#lookLabel')
 
@@ -186,10 +191,54 @@ const landCoverLayer = viewer.imageryLayers.addImageryProvider(
 )
 landCoverLayer.show = false
 
+const surfaceManifestResponse = await fetch(
+  '/evaluation/nlcd-2025/surface-manifest.json',
+)
+
+if (!surfaceManifestResponse.ok) {
+  throw new Error(
+    `Est surface manifest could not be loaded: ${surfaceManifestResponse.status}`,
+  )
+}
+
+const surfaceManifest = await surfaceManifestResponse.json() as {
+  geographicPreview: {
+    bounds: {
+      west: number
+      south: number
+      east: number
+      north: number
+    }
+  }
+}
+
+const surfaceBounds = surfaceManifest.geographicPreview.bounds
+
+const surfaceRectangle = Rectangle.fromDegrees(
+  surfaceBounds.west,
+  surfaceBounds.south,
+  surfaceBounds.east,
+  surfaceBounds.north,
+)
+
+const surfaceProvider = await SingleTileImageryProvider.fromUrl(
+  '/evaluation/nlcd-2025/surface-preview-geographic.png',
+  {
+    rectangle: surfaceRectangle,
+    credit: 'USGS Annual NLCD 2025 / Est Surface Study',
+  },
+)
+
+const surfaceLayer = viewer.imageryLayers.addImageryProvider(
+  surfaceProvider,
+)
+surfaceLayer.show = false
+
 function applyBaseline(): void {
   viewer.scene.globe.material = undefined
   imageryLayer.show = true
   landCoverLayer.show = false
+  surfaceLayer.show = false
 
   viewer.scene.globe.lambertDiffuseMultiplier = 1
   viewer.scene.globe.atmosphereLightIntensity = 10
@@ -204,6 +253,7 @@ function applyBaseline(): void {
 
 function applyEstLook(): void {
   landCoverLayer.show = false
+  surfaceLayer.show = false
   imageryLayer.show = false
   viewer.scene.globe.material = terrainMaterial
 
@@ -217,6 +267,7 @@ function applyLandCover(): void {
   viewer.scene.globe.material = undefined
   imageryLayer.show = false
   landCoverLayer.show = true
+  surfaceLayer.show = false
 
   viewer.scene.globe.lambertDiffuseMultiplier = 1
   viewer.scene.globe.atmosphereLightIntensity = 10
@@ -228,6 +279,25 @@ function applyLandCover(): void {
     duration: 2,
   })
 }
+
+function applyEstSurface(): void {
+  viewer.scene.globe.material = undefined
+  imageryLayer.show = false
+  landCoverLayer.show = false
+  surfaceLayer.show = true
+
+  viewer.scene.globe.lambertDiffuseMultiplier = 1
+  viewer.scene.globe.atmosphereLightIntensity = 10
+
+  lookLabel.textContent = 'Est Surface Study'
+
+  viewer.camera.flyTo({
+    destination: surfaceRectangle,
+    duration: 2,
+  })
+}
+
+estSurfaceButton.addEventListener('click', applyEstSurface)
 
 baselineButton.addEventListener('click', applyBaseline)
 estButton.addEventListener('click', applyEstLook)

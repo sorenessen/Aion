@@ -23,3 +23,9 @@ appsettings.Development.json
 node_modules/
 dist/
 coverage/
+
+# Local source datasets and generated geospatial assets
+data/
+
+# Local Python environments
+.venv/
