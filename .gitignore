@@ -29,3 +29,7 @@ data/
 
 # Local Python environments
 .venv/
+
+# Python generated caches
+__pycache__/
+*.py[cod]

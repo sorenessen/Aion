@@ -11,6 +11,7 @@ import {
   Material,
   Rectangle,
   SingleTileImageryProvider,
+  TileMapServiceImageryProvider,
   Viewer,
   WebMapServiceImageryProvider,
 } from 'cesium'
@@ -45,6 +46,7 @@ app.innerHTML = `
       <button id="estButton" type="button">Terrain Study</button>
       <button id="landCoverButton" type="button">Land Cover</button>
       <button id="estSurfaceButton" type="button">Est Surface Study</button>
+      <button id="estSurfaceTmsButton" type="button">Est Surface TMS</button>
     </div>
 
     <div id="sessionStatus">No simulation session selected.</div>
@@ -121,6 +123,9 @@ const landCoverButton =
 
 const estSurfaceButton =
   requireElement<HTMLButtonElement>('#estSurfaceButton')
+
+const estSurfaceTmsButton =
+  requireElement<HTMLButtonElement>('#estSurfaceTmsButton')
 
 const lookLabel =
   requireElement<HTMLSpanElement>('#lookLabel')
@@ -234,11 +239,27 @@ const surfaceLayer = viewer.imageryLayers.addImageryProvider(
 )
 surfaceLayer.show = false
 
+const surfaceTmsProvider =
+  await TileMapServiceImageryProvider.fromUrl(
+    '/evaluation/nlcd-2025/surface-tms/',
+    {
+      credit: 'USGS Annual NLCD 2025 / Est Surface TMS Study',
+    },
+  )
+
+const surfaceTmsLayer =
+  viewer.imageryLayers.addImageryProvider(
+    surfaceTmsProvider,
+  )
+
+surfaceTmsLayer.show = false
+
 function applyBaseline(): void {
   viewer.scene.globe.material = undefined
   imageryLayer.show = true
   landCoverLayer.show = false
   surfaceLayer.show = false
+  surfaceTmsLayer.show = false
 
   viewer.scene.globe.lambertDiffuseMultiplier = 1
   viewer.scene.globe.atmosphereLightIntensity = 10
@@ -254,6 +275,7 @@ function applyBaseline(): void {
 function applyEstLook(): void {
   landCoverLayer.show = false
   surfaceLayer.show = false
+  surfaceTmsLayer.show = false
   imageryLayer.show = false
   viewer.scene.globe.material = terrainMaterial
 
@@ -268,6 +290,7 @@ function applyLandCover(): void {
   imageryLayer.show = false
   landCoverLayer.show = true
   surfaceLayer.show = false
+  surfaceTmsLayer.show = false
 
   viewer.scene.globe.lambertDiffuseMultiplier = 1
   viewer.scene.globe.atmosphereLightIntensity = 10
@@ -285,6 +308,7 @@ function applyEstSurface(): void {
   imageryLayer.show = false
   landCoverLayer.show = false
   surfaceLayer.show = true
+  surfaceTmsLayer.show = false
 
   viewer.scene.globe.lambertDiffuseMultiplier = 1
   viewer.scene.globe.atmosphereLightIntensity = 10
@@ -297,7 +321,29 @@ function applyEstSurface(): void {
   })
 }
 
+function applyEstSurfaceTms(): void {
+  viewer.scene.globe.material = undefined
+  imageryLayer.show = false
+  landCoverLayer.show = false
+  surfaceLayer.show = false
+  surfaceTmsLayer.show = true
+
+  viewer.scene.globe.lambertDiffuseMultiplier = 1
+  viewer.scene.globe.atmosphereLightIntensity = 10
+
+  lookLabel.textContent = 'Est Surface TMS'
+
+  viewer.camera.flyTo({
+    destination: surfaceRectangle,
+    duration: 2,
+  })
+}
+
 estSurfaceButton.addEventListener('click', applyEstSurface)
+estSurfaceTmsButton.addEventListener(
+  'click',
+  applyEstSurfaceTms,
+)
 
 baselineButton.addEventListener('click', applyBaseline)
 estButton.addEventListener('click', applyEstLook)

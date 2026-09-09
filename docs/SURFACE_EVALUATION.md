@@ -93,3 +93,43 @@ limitations should not be confused with source-data misalignment.
 
 No regional spatial state has been added to Est.Simulation. The current
 planetary environment remains aggregate authoritative state.
+
+## Full-resolution TMS evaluation checkpoint
+
+On September 9, 2026, the regional surface study gained a fifth Cesium
+mode, Est Surface TMS. It preserves the original single-image study as a
+comparison control and serves a static geographic TMS pyramid generated
+from Est-owned categorical raster data.
+
+The pyramid uses EPSG:4326, 256-pixel tiles, south-origin TMS coordinates,
+and levels 7 through 11. It contains 758 PNG tiles. Nearest-neighbor
+reprojection preserves categorical values, and Unknown remains transparent.
+The generator, validator, and geometry tests are under scripts/surface/
+and tests/python/. The published evaluation tiles are under
+src/Est.Web/public/evaluation/nlcd-2025/surface-tms/.
+
+Validation completed before the checkpoint: 10 Python geometry tests
+passed, the published pyramid validator checked all 758 tiles and all
+10 canonical colors, and the web production build passed. The existing
+large-chunk build warning remains non-blocking.
+
+Browser inspection confirmed that the new mode loads and that close-range
+lake and shoreline detail is substantially less pixelated than the original
+preview. This is a promising visual result, not final acceptance. The
+dataset's approximately 30-meter source resolution remains the detail
+ceiling.
+
+Remaining evaluation work:
+- Add a renderer-only daylight/real-lighting control so comparisons do not
+  depend on the simulated sun position.
+- Preserve camera position when switching between the two surface modes
+  for precise A/B comparison.
+- Inspect coverage edges, transparent areas, missing tiles, seams, and
+  fallback behavior in daylight.
+- Evaluate natural category materials and close-range visual quality.
+- Harden and test publication rollback behavior before treating the
+  generator as a general-purpose production pipeline.
+
+No tile server, new backend service, or regional simulation state was
+introduced. The original Baseline and other comparison modes remain
+available.

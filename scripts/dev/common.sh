@@ -2,7 +2,7 @@
 
 set -u
 
-EST_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+EST_ROOT="$(cd "$(dirname "$0")/../.." && pwd -P)"
 
 listener_pid() {
     local port="$1"

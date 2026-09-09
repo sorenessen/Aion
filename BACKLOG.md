@@ -368,3 +368,15 @@ These are intentionally not rejected. They are simply not allowed to distort Fir
 - [ ] Improve regional coverage boundaries and fallback surface treatment.
 - [ ] Develop Est-owned natural surface materials without treating the diagnostic palette as final art direction.
 - [ ] Evaluate water treatment, close-range quality, performance, and transitions at multiple scales.
+
+## Regional surface TMS follow-up
+
+- [x] Generate and validate a full-resolution regional geographic TMS pyramid.
+- [x] Integrate the pyramid as a fifth Cesium comparison mode.
+- [x] Confirm improved close-range lake/shoreline detail in the browser.
+- [x] Fix launcher ownership detection for differently capitalized macOS paths.
+- [ ] Add renderer-only daylight/real-lighting evaluation control.
+- [ ] Preserve camera position during surface-mode A/B switching.
+- [ ] Validate coverage edges, transparency, seams, and fallback behavior.
+- [ ] Evaluate natural surface materials and close-range performance.
+- [ ] Harden and test TMS publication rollback behavior.
