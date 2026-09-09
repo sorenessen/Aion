@@ -195,6 +195,18 @@ TypeScript web application with Babylon.js or another browser-native renderer se
 - [ ] 1000x
 - [ ] Visually reflect first causal-system changes
 
+### Local development launcher
+
+- [x] Add a Sparrow workspace with Play Est as the primary action.
+- [x] Preserve independent Start API and Start Web development tasks.
+- [x] Launch API and Web in separate iTerm windows and wait for health.
+- [x] Reuse healthy Est-owned listeners without duplicate service windows.
+- [x] Refuse automatic termination or restart of occupied ports.
+- [x] Create a fresh Earth session and open Cesium from Play.
+- [x] Validate cold-start Play from Sparrow and subsequent service reuse.
+- [ ] Consider portable terminal integration if Est development expands beyond macOS.
+- [ ] Revisit durable session selection/resumption when the product requires it.
+
 ## Phase 8 - First Intervention
 
 Goal:

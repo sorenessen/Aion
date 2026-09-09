@@ -1,0 +1,17 @@
+[workspace]
+name = "Est"
+root = "."
+
+[tasks]
+
+[tasks."Play Est"]
+cmd = "./scripts/dev/play.sh"
+desc = "Start the services if needed and open a fresh Earth session."
+
+[tasks."Start API"]
+cmd = "./scripts/dev/api.sh"
+desc = "Start or reuse the Est API for development."
+
+[tasks."Start Web"]
+cmd = "./scripts/dev/web.sh"
+desc = "Start or reuse the Est Web renderer for development."

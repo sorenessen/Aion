@@ -84,5 +84,11 @@ alignment, terrain relief, coastline placement, and snow/ice coverage.
 The current 1,800-pixel preview and rectangular coverage are diagnostic,
 not the final surface appearance or level-of-detail strategy.
 
+For local development, use Sparrow's Play Est task or run
+`./scripts/dev/play.sh` from the repository root. Play starts or reuses
+the API and web hosts, creates a fresh Earth session, and opens Cesium.
+The individual Start API and Start Web tasks remain available for focused
+development. The macOS launcher requires iTerm and the project toolchain.
+
 See `docs/DEVELOPMENT.md` for development commands and
 `docs/SURFACE_EVALUATION.md` for the data pipeline and next steps.

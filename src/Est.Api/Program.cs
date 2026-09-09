@@ -34,6 +34,15 @@ builder.Services.AddSingleton(
 var app =
     builder.Build();
 
+app.MapGet(
+    "/health",
+    () => Results.Ok(
+        new
+        {
+            service = "Est.Api",
+            status = "healthy"
+        }));
+
 app.MapPost(
     "/sessions",
     (
