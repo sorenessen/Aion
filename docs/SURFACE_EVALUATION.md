@@ -226,3 +226,48 @@ more continuous-looking physical surface without altering authoritative
 category identity, inventing unsupported classifications, or moving Est
 surface semantics into Cesium. Blurring categorical truth is not an acceptable
 substitute for a presentation model.
+
+## Source-class visual structure checkpoint
+
+On September 11, 2026, the regional surface evaluation tested whether the
+classified-raster appearance was primarily caused by Est collapsing the
+original NLCD classes into its smaller semantic vocabulary.
+
+Direct geometry comparison confirmed that the original Annual NLCD raster and
+`surface-categories.tif` have identical dimensions, CRS, 30-meter resolution,
+bounds, and affine transform. Est's semantic conversion therefore does not
+introduce or coarsen the source-cell geometry. It changes categorical identity
+only.
+
+An adjacency analysis measured 4,807,796 class transitions between known
+neighboring NLCD cells. Est's semantic categories retain 2,868,083 of those
+transitions and intentionally collapse 1,939,713, or 40.35 percent. The largest
+collapsed groups are distinctions within developed intensity and forest type,
+with smaller losses within wetlands and agriculture.
+
+A disposable geographic diagnostic rendered all 16 known NLCD source classes
+with distinct presentation colors. Restoring those source distinctions visibly
+adds meaningful regional structure, especially within developed areas, forest,
+agriculture, and wetlands. It does not, however, resolve the fundamental visual
+limitation. The result still reads as categorical land-cover imagery, and the
+native 30-meter classified-cell geometry remains visually dominant.
+
+This changes the next presentation direction. Do not spend the next iteration
+smoothing Est semantic boundaries or further tuning procedural noise merely to
+hide categorical geometry. NLCD remains valuable authoritative input for Est
+surface semantics and may also contribute non-authoritative information to
+presentation, but direct category colorization should not be treated as the
+intended final visual-surface strategy.
+
+Preserve the current semantic pipeline and the version 3 presentation/TMS work
+as proven capabilities and evaluation controls. The next architectural
+investigation should define a visual-surface input and composition seam that is
+explicitly separate from authoritative simulation semantics. Presentation may
+legitimately use more source information than the simulation vocabulary and may
+combine multiple visual inputs, provided those inputs never become simulation
+truth and Cesium remains a presentation consumer rather than the owner of Est
+surface semantics.
+
+The guiding distinction is now: simulation semantics answer what is at a
+location; presentation determines how that location should look. Those concerns
+are related but are not required to use the same data product.

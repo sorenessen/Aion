@@ -380,5 +380,6 @@ These are intentionally not rejected. They are simply not allowed to distort Fir
 - [x] Validate coverage edges, transparency, seams, and fallback behavior.
 - [x] Evaluate the first deterministic natural material treatment at close range and preserve its architectural seam for category-specific follow-up.
 - [x] Evaluate category-specific broad/medium/fine material structure and confirm that classified-raster geometry, not generic tonal variation, is now the dominant close-range visual limitation.
-- [ ] Investigate presentation-stage treatment of semantic boundaries without blurring or modifying authoritative category truth.
+- [x] Evaluate whether semantic-boundary treatment is the next visual surface direction; source-class comparison showed that direct categorical rendering remains the limiting model even when richer NLCD structure is preserved.
+- [ ] Define a visual-surface input/composition seam separate from authoritative Est surface semantics.
 - [ ] Harden and test TMS publication rollback behavior.
