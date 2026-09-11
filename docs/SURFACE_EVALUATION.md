@@ -188,3 +188,41 @@ coordinate stability across render calls, Unknown transparency, alpha
 preservation, category-boundary preservation, material variation, exact
 zero-variation rendering, semantic category coverage, and input-shape
 validation.
+
+## Category-specific material presentation checkpoint
+
+On September 10, 2026, presentation version 3,
+`category-material-study`, extended each surface material from one generic
+variation amplitude to independent broad-, medium-, and fine-scale geographic
+variation. The underlying noise components remain deterministic in geographic
+space, while each category controls how strongly it responds at each scale.
+Semantic category IDs, category boundaries, Unknown transparency, TMS geometry,
+and Cesium ownership remain unchanged.
+
+The category profiles produce measurably different spatial responses. A focused
+frequency-response test confirmed that fine-scale treatment creates
+substantially more local variation than broad-scale treatment over the same
+geographic region. The full Python suite now contains 21 passing tests,
+including this material-profile behavior.
+
+The generated and published version 3 pyramid remains 758 tiles across levels
+7-11 with the same semantic coverage and 18,081,876 opaque pixels. Browser A/B
+inspection confirmed that category-specific spatial character is visible and
+that the TMS remains sharper and more useful than the blurred single-image
+study. No obvious tile-boundary artifact was observed.
+
+The visual experiment also identified the dominant remaining limitation.
+Category-specific tonal structure does not substantially change the fact that
+the regional surface reads as a classified raster draped over terrain. At close
+range, discrete source-cell and category-boundary geometry dominates perception
+more than the internal material variation. Increasing generic procedural
+variation would decorate those classified regions rather than address that
+limitation and could make the result look artificially noisy.
+
+Preserve version 3 as an architectural capability, but do not spend the next
+iteration tuning broad, medium, and fine amplitudes. The next presentation
+experiment should investigate how discrete semantic classifications can drive a
+more continuous-looking physical surface without altering authoritative
+category identity, inventing unsupported classifications, or moving Est
+surface semantics into Cesium. Blurring categorical truth is not an acceptable
+substitute for a presentation model.

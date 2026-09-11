@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from surface.presentation import (  # noqa: E402
+    MaterialVariation,
     SurfaceMaterial,
     SurfacePresentation,
     load_surface_presentation_model,
@@ -31,7 +32,7 @@ class SurfacePresentationTests(unittest.TestCase):
         unknown = self.presentation.materials_by_id[0]
 
         self.assertEqual(unknown.rgba, (0, 0, 0, 0))
-        self.assertEqual(unknown.variation, 0.0)
+        self.assertEqual(unknown.variation, MaterialVariation(0.0, 0.0, 0.0))
 
         categories = np.zeros((2, 2), dtype=np.uint8)
         longitude = np.array(
@@ -205,7 +206,7 @@ class SurfacePresentationTests(unittest.TestCase):
             materials_by_id={
                 4: SurfaceMaterial(
                     rgba=(10, 20, 30, 255),
-                    variation=0.0,
+                    variation=MaterialVariation(0.0, 0.0, 0.0),
                 ),
             },
         )
@@ -249,11 +250,11 @@ class SurfacePresentationTests(unittest.TestCase):
             materials_by_id={
                 3: SurfaceMaterial(
                     rgba=(200, 100, 50, 255),
-                    variation=0.0,
+                    variation=MaterialVariation(0.0, 0.0, 0.0),
                 ),
                 4: SurfaceMaterial(
                     rgba=(20, 80, 30, 255),
-                    variation=0.0,
+                    variation=MaterialVariation(0.0, 0.0, 0.0),
                 ),
             },
         )
@@ -286,6 +287,103 @@ class SurfacePresentationTests(unittest.TestCase):
         self.assertEqual(
             tuple(rgba[0, 2]),
             (20, 80, 30, 255),
+        )
+
+    def test_material_profiles_produce_distinct_spatial_response(self):
+        longitude_values = np.linspace(
+            -122.52,
+            -122.49,
+            64,
+            dtype=np.float64,
+        )
+        latitude_values = np.linspace(
+            47.59,
+            47.62,
+            64,
+            dtype=np.float64,
+        )
+
+        longitude, latitude = np.meshgrid(
+            longitude_values,
+            latitude_values,
+        )
+
+        categories = np.full(
+            longitude.shape,
+            4,
+            dtype=np.uint8,
+        )
+
+        broad_presentation = SurfacePresentation(
+            version=1,
+            name="broad-test",
+            materials_by_id={
+                4: SurfaceMaterial(
+                    rgba=(180, 180, 180, 255),
+                    variation=MaterialVariation(
+                        broad=0.15,
+                        medium=0.0,
+                        fine=0.0,
+                    ),
+                ),
+            },
+        )
+
+        fine_presentation = SurfacePresentation(
+            version=1,
+            name="fine-test",
+            materials_by_id={
+                4: SurfaceMaterial(
+                    rgba=(180, 180, 180, 255),
+                    variation=MaterialVariation(
+                        broad=0.0,
+                        medium=0.0,
+                        fine=0.15,
+                    ),
+                ),
+            },
+        )
+
+        broad_rgba = render_surface_material(
+            categories,
+            longitude,
+            latitude,
+            broad_presentation,
+        )
+        fine_rgba = render_surface_material(
+            categories,
+            longitude,
+            latitude,
+            fine_presentation,
+        )
+
+        self.assertFalse(
+            np.array_equal(
+                broad_rgba[:, :, :3],
+                fine_rgba[:, :, :3],
+            )
+        )
+
+        broad_horizontal_change = np.mean(
+            np.abs(
+                np.diff(
+                    broad_rgba[:, :, 0].astype(np.float64),
+                    axis=1,
+                )
+            )
+        )
+        fine_horizontal_change = np.mean(
+            np.abs(
+                np.diff(
+                    fine_rgba[:, :, 0].astype(np.float64),
+                    axis=1,
+                )
+            )
+        )
+
+        self.assertGreater(
+            fine_horizontal_change,
+            broad_horizontal_change,
         )
 
     def test_mismatched_longitude_shape_is_rejected(self):

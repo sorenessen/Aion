@@ -36,9 +36,16 @@ PRESENTATION_DEFINITION_PATH = (
 
 
 @dataclass(frozen=True)
+class MaterialVariation:
+    broad: float
+    medium: float
+    fine: float
+
+
+@dataclass(frozen=True)
 class SurfaceMaterial:
     rgba: tuple[int, int, int, int]
-    variation: float
+    variation: MaterialVariation
 
 
 @dataclass(frozen=True)
@@ -87,7 +94,7 @@ def load_surface_presentation_model() -> SurfacePresentation:
     for name, category in categories.items():
         presentation = presentation_categories[name]
         rgba = presentation["rgba"]
-        variation = presentation.get("variation", 0.0)
+        variation = presentation.get("variation", {})
 
         if (
             not isinstance(rgba, list)
@@ -102,19 +109,41 @@ def load_surface_presentation_model() -> SurfacePresentation:
                 f"Invalid RGBA presentation value for {name}: {rgba}"
             )
 
-        if (
-            not isinstance(variation, (int, float))
-            or isinstance(variation, bool)
-            or not 0.0 <= float(variation) <= 1.0
-        ):
+        if not isinstance(variation, dict):
             raise ValueError(
                 "Invalid presentation variation for "
                 f"{name}: {variation}"
             )
 
+        expected_variation_keys = {"broad", "medium", "fine"}
+
+        if set(variation) != expected_variation_keys:
+            raise ValueError(
+                "Presentation variation for "
+                f"{name} must define exactly "
+                "broad, medium, and fine."
+            )
+
+        variation_values: dict[str, float] = {}
+
+        for key in ("broad", "medium", "fine"):
+            value = variation[key]
+
+            if (
+                not isinstance(value, (int, float))
+                or isinstance(value, bool)
+                or not 0.0 <= float(value) <= 1.0
+            ):
+                raise ValueError(
+                    "Invalid presentation variation "
+                    f"{key} for {name}: {value}"
+                )
+
+            variation_values[key] = float(value)
+
         materials_by_id[int(category["id"])] = SurfaceMaterial(
             rgba=tuple(rgba),
-            variation=float(variation),
+            variation=MaterialVariation(**variation_values),
         )
 
     unknown_id = int(categories["Unknown"]["id"])
@@ -125,7 +154,7 @@ def load_surface_presentation_model() -> SurfacePresentation:
             "Unknown surface presentation must remain transparent."
         )
 
-    if unknown.variation != 0.0:
+    if unknown.variation != MaterialVariation(0.0, 0.0, 0.0):
         raise ValueError(
             "Unknown surface presentation cannot have material variation."
         )
@@ -197,10 +226,10 @@ def _value_noise(
     return nx0 + (nx1 - nx0) * ty
 
 
-def _material_noise(
+def _material_noise_components(
     longitude: np.ndarray,
     latitude: np.ndarray,
-) -> np.ndarray:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     broad = _value_noise(
         longitude,
         latitude,
@@ -217,11 +246,7 @@ def _material_noise(
         0.002,
     )
 
-    return (
-        broad * 0.50
-        + medium * 0.32
-        + fine * 0.18
-    )
+    return broad, medium, fine
 
 
 def render_surface_material(
@@ -240,9 +265,11 @@ def render_surface_material(
             "Category and latitude arrays must have matching shapes."
         )
 
-    noise = _material_noise(
-        longitude,
-        latitude,
+    broad_noise, medium_noise, fine_noise = (
+        _material_noise_components(
+            longitude,
+            latitude,
+        )
     )
 
     rgba = np.zeros(
@@ -263,11 +290,13 @@ def render_surface_material(
             dtype=np.float64,
         )
 
-        factor = (
-            1.0
-            + noise[mask, np.newaxis]
-            * material.variation
+        tone = (
+            broad_noise[mask] * material.variation.broad
+            + medium_noise[mask] * material.variation.medium
+            + fine_noise[mask] * material.variation.fine
         )
+
+        factor = 1.0 + tone[:, np.newaxis]
 
         varied_rgb = np.clip(
             np.rint(base * factor),

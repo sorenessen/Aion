@@ -1,7 +1,7 @@
 {
   "surfaceCategoryDefinitionVersion": 1,
-  "surfacePresentationVersion": 2,
-  "surfacePresentationName": "natural-material-study",
+  "surfacePresentationVersion": 3,
+  "surfacePresentationName": "category-material-study",
   "source": "data/generated/nlcd/surface-categories.tif",
   "scheme": "TMS",
   "profile": "geodetic",
