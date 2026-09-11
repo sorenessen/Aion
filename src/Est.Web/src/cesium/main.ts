@@ -48,6 +48,7 @@ app.innerHTML = `
       <button id="landCoverButton" type="button">Land Cover</button>
       <button id="estSurfaceButton" type="button">Est Surface Study</button>
       <button id="estSurfaceTmsButton" type="button">Est Surface TMS</button>
+      <button id="visualSurfaceButton" type="button">Est Visual Surface</button>
       <button id="daylightButton" type="button" aria-pressed="false">Lighting: Real Time</button>
     </div>
 
@@ -128,6 +129,9 @@ const estSurfaceButton =
 
 const estSurfaceTmsButton =
   requireElement<HTMLButtonElement>('#estSurfaceTmsButton')
+
+const visualSurfaceButton =
+  requireElement<HTMLButtonElement>('#visualSurfaceButton')
 
 const daylightButton =
   requireElement<HTMLButtonElement>('#daylightButton')
@@ -259,6 +263,21 @@ const surfaceTmsLayer =
 
 surfaceTmsLayer.show = false
 
+const visualSurfaceTmsProvider =
+  await TileMapServiceImageryProvider.fromUrl(
+    '/evaluation/nlcd-2025/visual-surface-tms/',
+    {
+      credit: 'USGS Annual NLCD 2025 / USGS 3DEP / Est Visual Surface Study',
+    },
+  )
+
+const visualSurfaceTmsLayer =
+  viewer.imageryLayers.addImageryProvider(
+    visualSurfaceTmsProvider,
+  )
+
+visualSurfaceTmsLayer.show = false
+
 const inspectionDaylightTime =
   JulianDate.fromIso8601('2026-06-21T20:00:00Z')
 
@@ -287,6 +306,7 @@ function applyBaseline(): void {
   landCoverLayer.show = false
   surfaceLayer.show = false
   surfaceTmsLayer.show = false
+  visualSurfaceTmsLayer.show = false
 
   viewer.scene.globe.lambertDiffuseMultiplier = 1
   viewer.scene.globe.atmosphereLightIntensity = 10
@@ -303,6 +323,7 @@ function applyEstLook(): void {
   landCoverLayer.show = false
   surfaceLayer.show = false
   surfaceTmsLayer.show = false
+  visualSurfaceTmsLayer.show = false
   imageryLayer.show = false
   viewer.scene.globe.material = terrainMaterial
 
@@ -318,6 +339,7 @@ function applyLandCover(): void {
   landCoverLayer.show = true
   surfaceLayer.show = false
   surfaceTmsLayer.show = false
+  visualSurfaceTmsLayer.show = false
 
   viewer.scene.globe.lambertDiffuseMultiplier = 1
   viewer.scene.globe.atmosphereLightIntensity = 10
@@ -332,6 +354,7 @@ function applyEstSurface(): void {
   landCoverLayer.show = false
   surfaceLayer.show = true
   surfaceTmsLayer.show = false
+  visualSurfaceTmsLayer.show = false
 
   viewer.scene.globe.lambertDiffuseMultiplier = 1
   viewer.scene.globe.atmosphereLightIntensity = 10
@@ -346,6 +369,7 @@ function applyEstSurfaceTms(): void {
   landCoverLayer.show = false
   surfaceLayer.show = false
   surfaceTmsLayer.show = true
+  visualSurfaceTmsLayer.show = false
 
   viewer.scene.globe.lambertDiffuseMultiplier = 1
   viewer.scene.globe.atmosphereLightIntensity = 10
@@ -354,10 +378,28 @@ function applyEstSurfaceTms(): void {
 
 }
 
+function applyVisualSurface(): void {
+  viewer.scene.globe.material = undefined
+  imageryLayer.show = false
+  landCoverLayer.show = false
+  surfaceLayer.show = false
+  surfaceTmsLayer.show = false
+  visualSurfaceTmsLayer.show = true
+
+  viewer.scene.globe.lambertDiffuseMultiplier = 1
+  viewer.scene.globe.atmosphereLightIntensity = 10
+
+  lookLabel.textContent = 'Est Visual Surface'
+}
+
 estSurfaceButton.addEventListener('click', applyEstSurface)
 estSurfaceTmsButton.addEventListener(
   'click',
   applyEstSurfaceTms,
+)
+visualSurfaceButton.addEventListener(
+  'click',
+  applyVisualSurface,
 )
 daylightButton.addEventListener(
   'click',

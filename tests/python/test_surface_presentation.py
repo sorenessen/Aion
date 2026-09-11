@@ -11,6 +11,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from surface.presentation import (  # noqa: E402
     MaterialVariation,
+    SlopeResponse,
     SurfaceMaterial,
     SurfacePresentation,
     load_surface_presentation_model,
@@ -385,6 +386,79 @@ class SurfacePresentationTests(unittest.TestCase):
             fine_horizontal_change,
             broad_horizontal_change,
         )
+
+    def test_slope_response_darkens_rgb_without_changing_alpha(self):
+        presentation = SurfacePresentation(
+            version=1,
+            name="slope-test",
+            materials_by_id={
+                4: SurfaceMaterial(
+                    rgba=(100, 100, 100, 255),
+                    variation=MaterialVariation(
+                        broad=0.0,
+                        medium=0.0,
+                        fine=0.0,
+                    ),
+                ),
+            },
+            slope_response=SlopeResponse(
+                maximum_degrees=60.0,
+                darkening=0.12,
+            ),
+        )
+
+        categories = np.full(
+            (1, 2),
+            4,
+            dtype=np.uint8,
+        )
+        longitude = np.array(
+            [[-122.0, -121.99]],
+            dtype=np.float64,
+        )
+        latitude = np.array(
+            [[47.0, 47.0]],
+            dtype=np.float64,
+        )
+        slope = np.array(
+            [[0.0, 60.0]],
+            dtype=np.float64,
+        )
+
+        rgba = render_surface_material(
+            categories,
+            longitude,
+            latitude,
+            presentation,
+            slope,
+        )
+
+        self.assertEqual(
+            tuple(rgba[0, 0]),
+            (100, 100, 100, 255),
+        )
+        self.assertEqual(
+            tuple(rgba[0, 1]),
+            (88, 88, 88, 255),
+        )
+
+    def test_mismatched_slope_shape_is_rejected(self):
+        categories = np.zeros((2, 2), dtype=np.uint8)
+        longitude = np.zeros((2, 2), dtype=np.float64)
+        latitude = np.zeros((2, 2), dtype=np.float64)
+        slope = np.zeros((1, 2), dtype=np.float64)
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "slope",
+        ):
+            render_surface_material(
+                categories,
+                longitude,
+                latitude,
+                self.presentation,
+                slope,
+            )
 
     def test_mismatched_longitude_shape_is_rejected(self):
         categories = np.zeros((2, 2), dtype=np.uint8)

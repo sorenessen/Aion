@@ -1,7 +1,11 @@
 {
-  "version": 3,
-  "name": "category-material-study",
+  "version": 4,
+  "name": "visual-surface-study",
   "description": "Est-owned presentation study for natural surface categories. This definition controls appearance only and does not define simulation or semantic truth.",
+  "slopeResponse": {
+    "maximumDegrees": 60.0,
+    "darkening": 0.12
+  },
   "categories": {
     "Unknown": {
       "rgba": [0, 0, 0, 0],

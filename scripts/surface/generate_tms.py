@@ -6,6 +6,7 @@ import argparse
 import json
 import shutil
 import sys
+from contextlib import ExitStack
 from pathlib import Path
 from xml.etree.ElementTree import Element, SubElement, ElementTree
 
@@ -98,11 +99,38 @@ def geographic_source_geometry(
     return bounds, resolution
 
 
+def validate_aligned_presentation_input(
+    source: rasterio.io.DatasetReader,
+    presentation_input: rasterio.io.DatasetReader,
+    label: str,
+) -> None:
+    checks = {
+        "CRS": presentation_input.crs == source.crs,
+        "transform": presentation_input.transform == source.transform,
+        "width": presentation_input.width == source.width,
+        "height": presentation_input.height == source.height,
+        "bounds": presentation_input.bounds == source.bounds,
+    }
+
+    failures = [
+        name
+        for name, passed in checks.items()
+        if not passed
+    ]
+
+    if failures:
+        raise RuntimeError(
+            f"{label} presentation input is not aligned with "
+            f"the Est semantic source grid: {failures}"
+        )
+
+
 def render_tile(
     source: rasterio.io.DatasetReader,
     tile: Tile,
     presentation: SurfacePresentation,
     valid_category_ids: set[int],
+    slope_source: rasterio.io.DatasetReader | None = None,
 ) -> tuple[np.ndarray, set[int]]:
     destination = np.zeros(
         (TILE_SIZE, TILE_SIZE),
@@ -134,6 +162,49 @@ def render_tile(
         raise RuntimeError(
             "Unexpected Est surface category IDs in tile "
             f"{tile}: {unexpected_ids}"
+        )
+
+    slope_degrees = None
+
+    if slope_source is not None:
+        slope_destination = np.full(
+            (TILE_SIZE, TILE_SIZE),
+            -999999.0,
+            dtype=np.float32,
+        )
+
+        reproject(
+            source=rasterio.band(slope_source, 1),
+            destination=slope_destination,
+            src_transform=slope_source.transform,
+            src_crs=slope_source.crs,
+            src_nodata=slope_source.nodata,
+            dst_transform=tile_transform(tile),
+            dst_crs="EPSG:4326",
+            dst_nodata=-999999.0,
+            resampling=Resampling.bilinear,
+        )
+
+        valid_slope = (
+            np.isfinite(slope_destination)
+            & (slope_destination != -999999.0)
+        )
+
+        semantic_surface = destination != 0
+
+        missing_slope = semantic_surface & ~valid_slope
+
+        if np.any(missing_slope):
+            raise RuntimeError(
+                "Slope presentation input does not cover "
+                f"all semantic pixels in tile {tile}: "
+                f"{int(np.count_nonzero(missing_slope))} missing"
+            )
+
+        slope_degrees = np.where(
+            valid_slope,
+            slope_destination,
+            0.0,
         )
 
     transform = tile_transform(tile)
@@ -172,6 +243,7 @@ def render_tile(
         longitude,
         latitude,
         presentation,
+        slope_degrees=slope_degrees,
     )
 
     return rgba, present_ids
@@ -297,6 +369,7 @@ def write_tilemapresource(
 def generate_pyramid_contents(
     source_path: Path,
     output_directory: Path,
+    slope_path: Path | None = None,
 ) -> dict:
     (
         definition_version,
@@ -312,10 +385,38 @@ def generate_pyramid_contents(
         exist_ok=True,
     )
 
-    with rasterio.open(source_path) as source:
+    with ExitStack() as stack:
+        source = stack.enter_context(
+            rasterio.open(source_path)
+        )
+
+        slope_source = None
+
+        if slope_path is not None:
+            slope_source = stack.enter_context(
+                rasterio.open(slope_path)
+            )
+
         if source.crs is None:
             raise SystemExit(
                 "Source category raster has no CRS."
+            )
+
+        if slope_source is not None:
+            if slope_source.crs is None:
+                raise RuntimeError(
+                    "Slope presentation input has no CRS."
+                )
+
+            if slope_source.count != 1:
+                raise RuntimeError(
+                    "Slope presentation input must have one band."
+                )
+
+            validate_aligned_presentation_input(
+                source,
+                slope_source,
+                "Slope",
             )
 
         bounds, source_resolution = (
@@ -352,6 +453,7 @@ def generate_pyramid_contents(
                     tile,
                     presentation,
                     valid_category_ids,
+                    slope_source=slope_source,
                 )
 
                 present_category_ids.update(
@@ -417,6 +519,13 @@ def generate_pyramid_contents(
         ),
         "surfacePresentationName": presentation.name,
         "source": str(source_path),
+        "presentationInputs": {
+            "slopeDegrees": (
+                str(slope_path)
+                if slope_path is not None
+                else None
+            ),
+        },
         "scheme": "TMS",
         "profile": "geodetic",
         "crs": "EPSG:4326",
@@ -445,6 +554,10 @@ def generate_pyramid_contents(
                 "transparent."
             ),
             (
+                "Slope is an optional presentation input and "
+                "does not define semantic surface identity."
+            ),
+            (
                 "TMS Y coordinates increase from south "
                 "to north."
             ),
@@ -467,6 +580,7 @@ def generate_pyramid_contents(
 def publish_pyramid(
     source_path: Path,
     output_directory: Path,
+    slope_path: Path | None = None,
 ) -> dict:
     output_directory = output_directory.resolve()
     parent = output_directory.parent
@@ -485,6 +599,7 @@ def publish_pyramid(
         manifest = generate_pyramid_contents(
             source_path,
             staging,
+            slope_path=slope_path,
         )
 
         validation = validate_pyramid(
@@ -551,12 +666,22 @@ def main() -> None:
             "data/generated/nlcd/surface-tms"
         ),
     )
+    parser.add_argument(
+        "--slope",
+        type=Path,
+        default=None,
+        help=(
+            "Optional aligned slope-in-degrees raster used "
+            "only as a presentation input."
+        ),
+    )
 
     args = parser.parse_args()
 
     manifest = publish_pyramid(
         args.source,
         args.output_directory,
+        slope_path=args.slope,
     )
 
     print(
