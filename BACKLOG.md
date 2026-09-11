@@ -22,7 +22,6 @@ Build the smallest complete vertical foundation for Est: one persistent planet, 
 - [x] Establish README
 - [x] Establish project charter
 - [x] Establish backlog
-- [x] Establish handoff document
 
 ### Architecture Foundation
 
