@@ -271,3 +271,53 @@ surface semantics.
 The guiding distinction is now: simulation semantics answer what is at a
 location; presentation determines how that location should look. Those concerns
 are related but are not required to use the same data product.
+
+## Continuous visual surface checkpoint
+
+On September 11, 2026, the regional surface evaluation added a continuous
+visual-surface path using Sentinel-2 RGB imagery as a presentation-only input.
+The semantic category raster continues to determine Est surface identity and
+known-versus-Unknown coverage. It does not colorize the imagery, blend category
+materials into it, or otherwise define the visual appearance of known pixels.
+
+The experiment deliberately excluded slope response, category tinting, and
+procedural material variation. Inside the known semantic footprint, the
+prepared RGB imagery is used directly as the visual basis; Unknown remains
+transparent. This isolates the architectural question of whether a continuous
+visual source can replace categorical land-cover geometry as the dominant
+rendered surface while preserving Est semantic ownership.
+
+The published continuous-surface pyramid remains EPSG:4326 geographic TMS with
+256-pixel tiles, south-origin Y coordinates, levels 7 through 11, and 758
+tiles. Its metadata records the visual RGB input separately from the semantic
+source. Cesium consumes the resulting RGBA tiles and does not interpret NLCD
+classes or Est semantic categories.
+
+Browser A/B evaluation validated the architecture hypothesis. The continuous
+surface no longer reads primarily as discrete NLCD polygons. Snowfields, rock,
+forest, ridges, drainage, roads, shoreline, developed areas, and industrial
+structure remain visually continuous across semantic-category boundaries.
+Semantic classification is therefore better treated as a description of the
+world than as the direct paint used to render the world.
+
+The experiment also exposed a separate resolution problem. Sentinel-2 RGB is
+approximately 10-meter source imagery, but the current imagery-preparation
+pipeline resamples it onto the approximately 30-meter semantic working grid
+before TMS generation. Close-range buildings consequently lose useful source
+detail and become soft or paint-like even though the continuous visual model
+itself is working.
+
+Do not address that limitation by increasing TMS zoom over the existing
+30-meter aligned RGB product. That would only magnify already-discarded detail.
+The next visual-surface iteration should decouple semantic and presentation
+resolution: keep authoritative semantics on their appropriate grid, preserve
+imagery near its useful source resolution, and sample both independently during
+visual composition. Semantic categories should use categorical nearest-neighbor
+sampling; continuous imagery should use an appropriate continuous resampler.
+The visual TMS level ceiling should follow actual visual-source resolution
+rather than the semantic raster resolution.
+
+This checkpoint establishes the intended ownership direction without adding a
+tile server, backend service, regional simulation state, or renderer-owned
+surface semantics. The categorical and material-based modes remain valuable
+evaluation controls and fallback capabilities.

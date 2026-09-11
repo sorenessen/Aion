@@ -1,0 +1,129 @@
+{
+  "surfaceCategoryDefinitionVersion": 1,
+  "surfacePresentationVersion": 4,
+  "surfacePresentationName": "visual-surface-study",
+  "source": "data/generated/nlcd/surface-categories.tif",
+  "presentationInputs": {
+    "slopeDegrees": null,
+    "visualRgb": "data/generated/imagery/aligned-visual-rgb.tif"
+  },
+  "scheme": "TMS",
+  "profile": "geodetic",
+  "crs": "EPSG:4326",
+  "tileSize": 256,
+  "yOrigin": "south",
+  "bounds": {
+    "west": -123.61633988971845,
+    "south": 46.23644679019992,
+    "east": -121.00788955795646,
+    "north": 47.76234468508979
+  },
+  "sourceGeographicDegreesPerPixel": 0.0003795765907686244,
+  "minimumLevel": 7,
+  "maximumLevel": 11,
+  "totalTileCount": 758,
+  "levels": [
+    {
+      "level": 7,
+      "degreesPerPixel": 0.0054931640625,
+      "tileCount": 4,
+      "opaqueTileCount": 2,
+      "transparentTileCount": 2,
+      "presentCategoryIds": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ]
+    },
+    {
+      "level": 8,
+      "degreesPerPixel": 0.00274658203125,
+      "tileCount": 12,
+      "opaqueTileCount": 8,
+      "transparentTileCount": 4,
+      "presentCategoryIds": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ]
+    },
+    {
+      "level": 9,
+      "degreesPerPixel": 0.001373291015625,
+      "tileCount": 40,
+      "opaqueTileCount": 18,
+      "transparentTileCount": 22,
+      "presentCategoryIds": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ]
+    },
+    {
+      "level": 10,
+      "degreesPerPixel": 0.0006866455078125,
+      "tileCount": 144,
+      "opaqueTileCount": 60,
+      "transparentTileCount": 84,
+      "presentCategoryIds": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ]
+    },
+    {
+      "level": 11,
+      "degreesPerPixel": 0.00034332275390625,
+      "tileCount": 558,
+      "opaqueTileCount": 230,
+      "transparentTileCount": 328,
+      "presentCategoryIds": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ]
+    }
+  ],
+  "notes": [
+    "Nearest-neighbor reprojection preserves categorical surface values.",
+    "Unknown category pixels are rendered transparent.",
+    "Slope is an optional presentation input and does not define semantic surface identity.",
+    "Visual RGB is an optional presentation input and does not define semantic surface identity.",
+    "TMS Y coordinates increase from south to north."
+  ]
+}

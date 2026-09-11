@@ -308,6 +308,7 @@ def render_surface_material(
     latitude: np.ndarray,
     presentation: SurfacePresentation,
     slope_degrees: np.ndarray | None = None,
+    visual_rgb: np.ndarray | None = None,
 ) -> np.ndarray:
     if categories.shape != longitude.shape:
         raise ValueError(
@@ -334,6 +335,34 @@ def render_surface_material(
             raise ValueError(
                 "Slope values cannot be negative."
             )
+
+    if visual_rgb is not None:
+        expected_shape = (*categories.shape, 3)
+
+        if visual_rgb.shape != expected_shape:
+            raise ValueError(
+                "Visual RGB input must have shape "
+                f"{expected_shape}, got {visual_rgb.shape}."
+            )
+
+        if visual_rgb.dtype != np.uint8:
+            raise ValueError(
+                "Visual RGB input must use uint8 channels."
+            )
+
+        rgba = np.zeros(
+            (*categories.shape, 4),
+            dtype=np.uint8,
+        )
+
+        semantic_surface = categories != 0
+
+        rgba[semantic_surface, :3] = (
+            visual_rgb[semantic_surface]
+        )
+        rgba[semantic_surface, 3] = 255
+
+        return rgba
 
     broad_noise, medium_noise, fine_noise = (
         _material_noise_components(

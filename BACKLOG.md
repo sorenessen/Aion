@@ -382,5 +382,7 @@ These are intentionally not rejected. They are simply not allowed to distort Fir
 - [x] Evaluate category-specific broad/medium/fine material structure and confirm that classified-raster geometry, not generic tonal variation, is now the dominant close-range visual limitation.
 - [x] Evaluate whether semantic-boundary treatment is the next visual surface direction; source-class comparison showed that direct categorical rendering remains the limiting model even when richer NLCD structure is preserved.
 - [x] Define and prove a visual-surface input/composition seam separate from authoritative Est surface semantics; terrain-derived slope now influences presentation without changing semantic identity, coverage, or renderer ownership.
-- [ ] Define the next visual-surface composition model so categorical land-cover geometry can inform appearance without being directly exposed as the rendered surface. Treat terrain and semantic land cover as inputs, not a finished visual surface.
+- [x] Define the next visual-surface composition model so categorical land-cover geometry can inform appearance without being directly exposed as the rendered surface. Continuous Sentinel-2 RGB now provides the visual basis while Est semantics independently define surface identity and coverage.
+- [ ] Decouple visual-surface resolution from semantic-grid resolution so approximately 10-meter imagery detail is preserved instead of being downsampled onto the approximately 30-meter semantic grid before composition.
+- [ ] Derive visual TMS detail level from the effective visual-source resolution rather than the semantic raster resolution.
 - [ ] Harden and test TMS publication rollback behavior.
