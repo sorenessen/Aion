@@ -377,6 +377,6 @@ These are intentionally not rejected. They are simply not allowed to distort Fir
 - [x] Fix launcher ownership detection for differently capitalized macOS paths.
 - [x] Add renderer-only daylight/real-lighting evaluation control.
 - [x] Preserve camera position during surface-mode A/B switching.
-- [ ] Validate coverage edges, transparency, seams, and fallback behavior.
+- [x] Validate coverage edges, transparency, seams, and fallback behavior.
 - [ ] Evaluate natural surface materials and close-range performance.
 - [ ] Harden and test TMS publication rollback behavior.

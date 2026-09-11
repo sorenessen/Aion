@@ -119,14 +119,23 @@ preview. This is a promising visual result, not final acceptance. The
 dataset's approximately 30-meter source resolution remains the detail
 ceiling.
 
+Subsequent browser evaluation confirmed:
+- Renderer-only inspection daylight works without changing authoritative
+  Est simulation state.
+- Surface modes can be switched without moving the camera.
+- No obvious tile-to-tile seams were observed in populated regional
+  coverage.
+- Unknown pixels remain transparent as designed.
+- The finite regional coverage boundary is clearly visible when the
+  surrounding globe has no Est-owned surface fallback. This is an
+  evaluation-data limitation, not a TMS alignment failure. Do not hide it
+  by inventing classifications or stretching regional data beyond its
+  source coverage. A future surface stack should allow detailed regional
+  semantics to fall back to coarser Est-owned planetary semantics.
+
 Remaining evaluation work:
-- Add a renderer-only daylight/real-lighting control so comparisons do not
-  depend on the simulated sun position.
-- Preserve camera position when switching between the two surface modes
-  for precise A/B comparison.
-- Inspect coverage edges, transparent areas, missing tiles, seams, and
-  fallback behavior in daylight.
-- Evaluate natural category materials and close-range visual quality.
+- Evaluate natural category materials and close-range visual quality,
+  performance, and scale transitions.
 - Harden and test publication rollback behavior before treating the
   generator as a general-purpose production pipeline.
 
