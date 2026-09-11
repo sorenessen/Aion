@@ -164,6 +164,7 @@ Est's implementation should remain simple, readable, maintainable, and adaptable
 - Keep the authoritative simulation independent of presentation, persistence, hosting, and vendor-specific infrastructure wherever practical.
 - Avoid unnecessary assumptions about operating systems, deployment environments, geographic regions, languages, calendars, units, or world representations in the core.
 - Introduce abstractions when they establish a useful boundary, not merely because a hypothetical future implementation might exist.
+- Treat architectural principles as strong defaults, not purity requirements. A deliberate exception is acceptable when it produces a materially simpler, faster, more reliable, or higher-quality implementation and the resulting cost to performance, maintainability, reliability, scientific integrity, extensibility, or future flexibility is negligible. Keep exceptions bounded, explicit, documented, observable where useful, and reasonably reversible. Do not add meaningful complexity solely to avoid insignificant architectural risk.
 - Revisit foundational ownership and architecture when incremental patches would materially compromise performance, reliability, maintainability, capability, or future flexibility.
 - At milestone reviews, explicitly ask: What are we becoming accidentally dependent on? What should we keep, simplify, replace, defer, or abandon?
 

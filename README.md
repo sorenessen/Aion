@@ -73,16 +73,21 @@ Phase 7 is evaluating CesiumJS alongside the preserved Babylon prototype.
 Cesium is a serious candidate, not a final renderer selection.
 
 The browser evaluation now reads authoritative simulation state through
-Est.Api and renders a real regional surface derived from USGS Annual NLCD
-Land Cover 2025. The validated pipeline is:
+Est.Api and includes a real regional surface study derived from USGS Annual
+NLCD Land Cover 2025. The validated semantic/evaluation pipeline is:
 
-USGS categorical raster -> Est surface categories -> geographic raster
--> Cesium terrain draping.
+USGS categorical raster -> Est surface categories -> Est presentation
+-> geographic TMS -> Cesium terrain draping.
 
 The Olympia/Puget Sound/Mount Rainier evaluation confirms geographic
-alignment, terrain relief, coastline placement, and snow/ice coverage.
-The current 1,800-pixel preview and rectangular coverage are diagnostic,
-not the final surface appearance or level-of-detail strategy.
+alignment, terrain relief, coastline placement, snow/ice coverage, and a
+renderer-independent path from Est surface semantics to presentation assets.
+It also established that direct categorical land-cover rendering is not the
+intended final visual-surface strategy. Est surface semantics describe what is
+at a location; a separate visual-surface composition path may combine
+non-authoritative presentation inputs to determine how that location should
+look. Cesium remains a consumer of those presentation assets rather than the
+owner of semantic interpretation.
 
 For local development, use Sparrow's Play Est task or run
 `./scripts/dev/play.sh` from the repository root. Play starts or reuses
