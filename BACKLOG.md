@@ -381,5 +381,6 @@ These are intentionally not rejected. They are simply not allowed to distort Fir
 - [x] Evaluate the first deterministic natural material treatment at close range and preserve its architectural seam for category-specific follow-up.
 - [x] Evaluate category-specific broad/medium/fine material structure and confirm that classified-raster geometry, not generic tonal variation, is now the dominant close-range visual limitation.
 - [x] Evaluate whether semantic-boundary treatment is the next visual surface direction; source-class comparison showed that direct categorical rendering remains the limiting model even when richer NLCD structure is preserved.
-- [ ] Define a visual-surface input/composition seam separate from authoritative Est surface semantics.
+- [x] Define and prove a visual-surface input/composition seam separate from authoritative Est surface semantics; terrain-derived slope now influences presentation without changing semantic identity, coverage, or renderer ownership.
+- [ ] Define the next visual-surface composition model so categorical land-cover geometry can inform appearance without being directly exposed as the rendered surface. Treat terrain and semantic land cover as inputs, not a finished visual surface.
 - [ ] Harden and test TMS publication rollback behavior.
