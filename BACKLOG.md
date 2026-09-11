@@ -364,9 +364,9 @@ These are intentionally not rejected. They are simply not allowed to distort Fir
 - [x] Render a coherent Olympia/Puget Sound/Mount Rainier slice using real terrain and land-cover semantics.
 - [x] Verify geographic alignment, coastline placement, terrain relief, and snow/ice coverage through close-range browser inspection.
 - [x] Preserve the working satellite baseline, terrain study, and USGS WMS comparison; keep renderer selection open.
-- [ ] Evaluate full-resolution regional rendering and an appropriate level-of-detail strategy.
+- [x] Evaluate full-resolution regional rendering through a static geographic TMS pyramid at levels 7-11.
 - [ ] Improve regional coverage boundaries and fallback surface treatment.
-- [ ] Develop Est-owned natural surface materials without treating the diagnostic palette as final art direction.
+- [x] Establish an Est-owned natural material presentation seam with deterministic geographic variation, independent of Cesium.
 - [ ] Evaluate water treatment, close-range quality, performance, and transitions at multiple scales.
 
 ## Regional surface TMS follow-up
@@ -378,5 +378,5 @@ These are intentionally not rejected. They are simply not allowed to distort Fir
 - [x] Add renderer-only daylight/real-lighting evaluation control.
 - [x] Preserve camera position during surface-mode A/B switching.
 - [x] Validate coverage edges, transparency, seams, and fallback behavior.
-- [ ] Evaluate natural surface materials and close-range performance.
+- [x] Evaluate the first deterministic natural material treatment at close range and preserve its architectural seam for category-specific follow-up.
 - [ ] Harden and test TMS publication rollback behavior.

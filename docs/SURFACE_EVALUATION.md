@@ -142,3 +142,49 @@ Remaining evaluation work:
 No tile server, new backend service, or regional simulation state was
 introduced. The original Baseline and other comparison modes remain
 available.
+
+## Natural material presentation checkpoint
+
+On September 10, 2026, the regional TMS pipeline gained an Est-owned
+presentation layer between semantic surface categories and generated
+imagery. Semantic identity remains in `surface-categories.json`;
+`surface-presentation.json` defines presentation-only material parameters,
+and `scripts/surface/presentation.py` interprets them. Cesium continues to
+consume generated imagery and does not own Est surface semantics.
+
+Presentation version 2, `natural-material-study`, adds deterministic
+geographic tonal variation to the base color of each known surface category.
+The variation is calculated from longitude and latitude rather than tile-local
+random state, so a geographic coordinate receives the same treatment
+independently of the tile or render call that contains it. Unknown remains
+fully transparent. Category IDs and boundaries are not blended or modified.
+
+The published evaluation pyramid remains 758 tiles across levels 7 through
+11. Validation now permits the many RGB values intentionally produced by
+material variation while enforcing binary alpha, zero RGB for transparent
+pixels, and agreement between the published manifest and the current Est
+presentation definition.
+
+Browser A/B inspection against the earlier flat Est Surface Study confirmed
+that the presentation seam works without Cesium-specific material logic.
+The difference is visible, especially across broad forest, barren, developed,
+and snow/ice regions, but subtle tonal variation alone does not remove the
+classified-raster appearance. Terrain relief contributes much of the useful
+small-scale visual structure, while the approximately 30-meter source
+classification remains visible at close range.
+
+This result is useful even though it is not a final art direction. It
+establishes that Est surface categories can describe presentation materials
+rather than only fixed colors while preserving semantic ownership and
+renderer independence. Further work should build category-specific material
+structure on this seam rather than spending substantial effort tuning a
+single generic noise treatment. Any added structure must remain
+presentation-only and must not imply unsupported simulation facts.
+
+Validation for this checkpoint includes 20 passing Python tests: 10
+presentation/material tests and the existing 10 geographic TMS geometry
+tests. The presentation tests cover deterministic rendering, geographic
+coordinate stability across render calls, Unknown transparency, alpha
+preservation, category-boundary preservation, material variation, exact
+zero-variation rendering, semantic category coverage, and input-shape
+validation.

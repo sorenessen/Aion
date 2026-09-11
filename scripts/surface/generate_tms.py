@@ -28,6 +28,11 @@ from surface.tms import (  # noqa: E402
     tile_transform,
     tiles_for_bounds,
 )
+from surface.presentation import (  # noqa: E402
+    SurfacePresentation,
+    load_surface_presentation_model,
+    render_surface_material,
+)
 from surface.validate_tms import validate_pyramid  # noqa: E402
 
 
@@ -43,33 +48,31 @@ DEFINITION_PATH = (
 
 def load_category_model() -> tuple[
     int,
-    dict[int, tuple[int, int, int, int]],
+    SurfacePresentation,
     set[int],
 ]:
     definition = json.loads(DEFINITION_PATH.read_text())
+    presentation = load_surface_presentation_model()
 
-    preview_rgba = {
-        int(category["id"]): tuple(category["previewRgba"])
+    valid_category_ids = {
+        int(category["id"])
         for category in definition["categories"].values()
     }
 
+    if (
+        set(presentation.materials_by_id)
+        != valid_category_ids
+    ):
+        raise RuntimeError(
+            "Surface presentation category IDs do not match "
+            "the semantic category definition."
+        )
+
     return (
         int(definition["version"]),
-        preview_rgba,
-        set(preview_rgba),
+        presentation,
+        valid_category_ids,
     )
-
-
-def build_rgba(
-    categories: np.ndarray,
-    preview_rgba: dict[int, tuple[int, int, int, int]],
-) -> np.ndarray:
-    lookup = np.zeros((256, 4), dtype=np.uint8)
-
-    for category_id, rgba in preview_rgba.items():
-        lookup[category_id] = rgba
-
-    return lookup[categories]
 
 
 def geographic_source_geometry(
@@ -98,7 +101,7 @@ def geographic_source_geometry(
 def render_tile(
     source: rasterio.io.DatasetReader,
     tile: Tile,
-    preview_rgba: dict[int, tuple[int, int, int, int]],
+    presentation: SurfacePresentation,
     valid_category_ids: set[int],
 ) -> tuple[np.ndarray, set[int]]:
     destination = np.zeros(
@@ -133,7 +136,45 @@ def render_tile(
             f"{tile}: {unexpected_ids}"
         )
 
-    return build_rgba(destination, preview_rgba), present_ids
+    transform = tile_transform(tile)
+
+    columns = np.arange(
+        TILE_SIZE,
+        dtype=np.float64,
+    ) + 0.5
+    rows = np.arange(
+        TILE_SIZE,
+        dtype=np.float64,
+    ) + 0.5
+
+    longitude = (
+        transform.c
+        + columns[np.newaxis, :]
+        * transform.a
+    )
+    longitude = np.broadcast_to(
+        longitude,
+        destination.shape,
+    )
+
+    latitude = (
+        transform.f
+        + rows[:, np.newaxis]
+        * transform.e
+    )
+    latitude = np.broadcast_to(
+        latitude,
+        destination.shape,
+    )
+
+    rgba = render_surface_material(
+        destination,
+        longitude,
+        latitude,
+        presentation,
+    )
+
+    return rgba, present_ids
 
 
 def write_png(
@@ -259,7 +300,7 @@ def generate_pyramid_contents(
 ) -> dict:
     (
         definition_version,
-        preview_rgba,
+        presentation,
         valid_category_ids,
     ) = load_category_model()
 
@@ -309,7 +350,7 @@ def generate_pyramid_contents(
                 rgba, present_ids = render_tile(
                     source,
                     tile,
-                    preview_rgba,
+                    presentation,
                     valid_category_ids,
                 )
 
@@ -371,6 +412,10 @@ def generate_pyramid_contents(
         "surfaceCategoryDefinitionVersion": (
             definition_version
         ),
+        "surfacePresentationVersion": (
+            presentation.version
+        ),
+        "surfacePresentationName": presentation.name,
         "source": str(source_path),
         "scheme": "TMS",
         "profile": "geodetic",

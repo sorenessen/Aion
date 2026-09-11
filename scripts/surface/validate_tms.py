@@ -18,26 +18,8 @@ from rasterio.errors import NotGeoreferencedWarning
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 
+from surface.presentation import load_surface_presentation_model  # noqa: E402
 from surface.tms import TILE_SIZE, Tile, tile_bounds  # noqa: E402
-
-
-DEFINITION_PATH = (
-    ROOT
-    / "src"
-    / "Est.Web"
-    / "src"
-    / "surface"
-    / "surface-categories.json"
-)
-
-
-def canonical_palette() -> set[tuple[int, int, int, int]]:
-    definition = json.loads(DEFINITION_PATH.read_text())
-
-    return {
-        tuple(int(channel) for channel in category["previewRgba"])
-        for category in definition["categories"].values()
-    }
 
 
 def assert_close(
@@ -55,8 +37,7 @@ def assert_close(
 def validate_tile(
     path: Path,
     tile: Tile,
-    palette: set[tuple[int, int, int, int]],
-) -> set[tuple[int, int, int, int]]:
+) -> tuple[int, int]:
     # Validate the tile coordinates against the geographic grid.
     # Individual PNG files intentionally carry no georeferencing
     # sidecars; their geographic placement comes from TMS metadata
@@ -98,23 +79,37 @@ def validate_tile(
             bands = dataset.read()
 
     rgba = np.moveaxis(bands, 0, -1)
-    unique_colors = {
-        tuple(int(channel) for channel in color)
-        for color in np.unique(
-            rgba.reshape(-1, 4),
+    alpha = rgba[:, :, 3]
+
+    unexpected_alpha = set(
+        int(value)
+        for value in np.unique(alpha)
+    ) - {0, 255}
+
+    if unexpected_alpha:
+        raise ValueError(
+            f"{path}: contains unexpected alpha values: "
+            f"{sorted(unexpected_alpha)}"
+        )
+
+    transparent = alpha == 0
+
+    if np.any(rgba[transparent, :3] != 0):
+        raise ValueError(
+            f"{path}: transparent pixels must have zero RGB."
+        )
+
+    opaque_pixel_count = int(
+        np.count_nonzero(alpha)
+    )
+    distinct_rgb_count = len(
+        np.unique(
+            rgba[alpha == 255, :3],
             axis=0,
         )
-    }
+    )
 
-    unexpected_colors = unique_colors - palette
-
-    if unexpected_colors:
-        sample = sorted(unexpected_colors)[:10]
-        raise ValueError(
-            f"{path}: contains noncanonical RGBA values: {sample}"
-        )
-
-    return unique_colors
+    return opaque_pixel_count, distinct_rgb_count
 
 
 def validate_tilemapresource(
@@ -260,6 +255,26 @@ def validate_pyramid(
             "Manifest yOrigin must be south."
         )
 
+    presentation = load_surface_presentation_model()
+
+    if (
+        manifest.get("surfacePresentationVersion")
+        != presentation.version
+    ):
+        raise ValueError(
+            "Manifest surfacePresentationVersion does not "
+            "match the current Est presentation definition."
+        )
+
+    if (
+        manifest.get("surfacePresentationName")
+        != presentation.name
+    ):
+        raise ValueError(
+            "Manifest surfacePresentationName does not "
+            "match the current Est presentation definition."
+        )
+
     minimum_level = int(manifest["minimumLevel"])
     maximum_level = int(manifest["maximumLevel"])
 
@@ -292,11 +307,8 @@ def validate_pyramid(
         manifest["bounds"],
     )
 
-    palette = canonical_palette()
-    encountered_colors: set[
-        tuple[int, int, int, int]
-    ] = set()
-
+    total_opaque_pixels = 0
+    maximum_distinct_rgb_per_tile = 0
     total_tiles = 0
 
     for record in level_records:
@@ -330,13 +342,19 @@ def validate_pyramid(
                     f"Invalid TMS tile path: {path}"
                 ) from error
 
-            colors = validate_tile(
+            (
+                opaque_pixel_count,
+                distinct_rgb_count,
+            ) = validate_tile(
                 path,
                 Tile(level, x, y),
-                palette,
             )
 
-            encountered_colors.update(colors)
+            total_opaque_pixels += opaque_pixel_count
+            maximum_distinct_rgb_per_tile = max(
+                maximum_distinct_rgb_per_tile,
+                distinct_rgb_count,
+            )
 
         total_tiles += len(tile_paths)
 
@@ -374,8 +392,10 @@ def validate_pyramid(
         "minimumLevel": minimum_level,
         "maximumLevel": maximum_level,
         "validatedTileCount": total_tiles,
-        "encounteredColorCount": len(encountered_colors),
-        "canonicalColorCount": len(palette),
+        "opaquePixelCount": total_opaque_pixels,
+        "maximumDistinctRgbPerTile": (
+            maximum_distinct_rgb_per_tile
+        ),
     }
 
 
