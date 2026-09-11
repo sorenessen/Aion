@@ -8,6 +8,7 @@ import {
   createWorldTerrainAsync,
   ImageryLayer,
   Ion,
+  JulianDate,
   Material,
   Rectangle,
   SingleTileImageryProvider,
@@ -47,6 +48,7 @@ app.innerHTML = `
       <button id="landCoverButton" type="button">Land Cover</button>
       <button id="estSurfaceButton" type="button">Est Surface Study</button>
       <button id="estSurfaceTmsButton" type="button">Est Surface TMS</button>
+      <button id="daylightButton" type="button" aria-pressed="false">Lighting: Real Time</button>
     </div>
 
     <div id="sessionStatus">No simulation session selected.</div>
@@ -126,6 +128,9 @@ const estSurfaceButton =
 
 const estSurfaceTmsButton =
   requireElement<HTMLButtonElement>('#estSurfaceTmsButton')
+
+const daylightButton =
+  requireElement<HTMLButtonElement>('#daylightButton')
 
 const lookLabel =
   requireElement<HTMLSpanElement>('#lookLabel')
@@ -254,6 +259,28 @@ const surfaceTmsLayer =
 
 surfaceTmsLayer.show = false
 
+const inspectionDaylightTime =
+  JulianDate.fromIso8601('2026-06-21T20:00:00Z')
+
+let inspectionDaylightEnabled = false
+
+function applyInspectionLighting(): void {
+  inspectionDaylightEnabled = !inspectionDaylightEnabled
+
+  viewer.clock.currentTime = inspectionDaylightEnabled
+    ? inspectionDaylightTime.clone()
+    : JulianDate.now()
+
+  daylightButton.textContent = inspectionDaylightEnabled
+    ? 'Lighting: Inspection Daylight'
+    : 'Lighting: Real Time'
+
+  daylightButton.setAttribute(
+    'aria-pressed',
+    String(inspectionDaylightEnabled),
+  )
+}
+
 function applyBaseline(): void {
   viewer.scene.globe.material = undefined
   imageryLayer.show = true
@@ -297,10 +324,6 @@ function applyLandCover(): void {
 
   lookLabel.textContent = 'USGS Land Cover'
 
-  viewer.camera.flyTo({
-    destination: Rectangle.fromDegrees(-124.5, 45.5, -120.0, 48.5),
-    duration: 2,
-  })
 }
 
 function applyEstSurface(): void {
@@ -315,10 +338,6 @@ function applyEstSurface(): void {
 
   lookLabel.textContent = 'Est Surface Study'
 
-  viewer.camera.flyTo({
-    destination: surfaceRectangle,
-    duration: 2,
-  })
 }
 
 function applyEstSurfaceTms(): void {
@@ -333,16 +352,16 @@ function applyEstSurfaceTms(): void {
 
   lookLabel.textContent = 'Est Surface TMS'
 
-  viewer.camera.flyTo({
-    destination: surfaceRectangle,
-    duration: 2,
-  })
 }
 
 estSurfaceButton.addEventListener('click', applyEstSurface)
 estSurfaceTmsButton.addEventListener(
   'click',
   applyEstSurfaceTms,
+)
+daylightButton.addEventListener(
+  'click',
+  applyInspectionLighting,
 )
 
 baselineButton.addEventListener('click', applyBaseline)

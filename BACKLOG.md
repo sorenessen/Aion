@@ -375,8 +375,8 @@ These are intentionally not rejected. They are simply not allowed to distort Fir
 - [x] Integrate the pyramid as a fifth Cesium comparison mode.
 - [x] Confirm improved close-range lake/shoreline detail in the browser.
 - [x] Fix launcher ownership detection for differently capitalized macOS paths.
-- [ ] Add renderer-only daylight/real-lighting evaluation control.
-- [ ] Preserve camera position during surface-mode A/B switching.
+- [x] Add renderer-only daylight/real-lighting evaluation control.
+- [x] Preserve camera position during surface-mode A/B switching.
 - [ ] Validate coverage edges, transparency, seams, and fallback behavior.
 - [ ] Evaluate natural surface materials and close-range performance.
 - [ ] Harden and test TMS publication rollback behavior.
