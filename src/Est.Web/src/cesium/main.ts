@@ -284,7 +284,7 @@ visualSurfaceTmsLayer.show = false
 
 const continuousSurfaceTmsProvider =
   await TileMapServiceImageryProvider.fromUrl(
-    '/evaluation/nlcd-2025/continuous-surface-tms-10m/',
+    '/evaluation/nlcd-2025/continuous-surface-tms/',
     {
       credit: 'Copernicus Sentinel-2 / Est Continuous Visual Surface Study',
     },
