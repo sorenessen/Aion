@@ -6,6 +6,7 @@ import {
   Cartesian3,
   Color,
   createWorldTerrainAsync,
+  HeightReference,
   ImageryLayer,
   Ion,
   JulianDate,
@@ -50,6 +51,7 @@ app.innerHTML = `
       <button id="estSurfaceTmsButton" type="button">Est Surface TMS</button>
       <button id="visualSurfaceButton" type="button">Est Visual Surface</button>
       <button id="continuousSurfaceButton" type="button">Est Continuous Surface</button>
+      <button id="localGeometryButton" type="button">Local Geometry</button>
       <button id="daylightButton" type="button" aria-pressed="false">Lighting: Real Time</button>
     </div>
 
@@ -136,6 +138,9 @@ const visualSurfaceButton =
 
 const continuousSurfaceButton =
   requireElement<HTMLButtonElement>('#continuousSurfaceButton')
+
+const localGeometryButton =
+  requireElement<HTMLButtonElement>('#localGeometryButton')
 
 const daylightButton =
   requireElement<HTMLButtonElement>('#daylightButton')
@@ -297,6 +302,95 @@ const continuousSurfaceTmsLayer =
 
 continuousSurfaceTmsLayer.show = false
 
+type LocalSceneFeature = {
+  type: 'Feature'
+  properties: {
+    id: string
+    name?: string
+    heightMeters: number
+    heightSource: string
+  }
+  geometry: {
+    type: 'Polygon'
+    coordinates: number[][][]
+  }
+}
+
+type LocalSceneFeatureCollection = {
+  type: 'FeatureCollection'
+  estLocalSceneVersion: number
+  features: LocalSceneFeature[]
+}
+
+const localSceneResponse = await fetch(
+  '/evaluation/local-scene/olympia-capitol-buildings.geojson',
+)
+
+if (!localSceneResponse.ok) {
+  throw new Error(
+    `Could not load Olympia local-scene evaluation: ${localSceneResponse.status}`,
+  )
+}
+
+const localScene =
+  await localSceneResponse.json() as LocalSceneFeatureCollection
+
+if (
+  localScene.type !== 'FeatureCollection'
+  || localScene.estLocalSceneVersion !== 1
+) {
+  throw new Error('Unsupported Est local-scene evaluation asset.')
+}
+
+const localGeometryEntities = localScene.features.map((feature) => {
+  if (
+    feature.geometry.type !== 'Polygon'
+    || !Number.isFinite(feature.properties.heightMeters)
+    || feature.properties.heightMeters <= 0
+  ) {
+    throw new Error(
+      `Invalid Est local-scene building feature: ${feature.properties.id}`,
+    )
+  }
+
+  const ring = feature.geometry.coordinates[0]
+
+  if (!ring || ring.length < 4) {
+    throw new Error(
+      `Est local-scene building has no usable exterior ring: ${feature.properties.id}`,
+    )
+  }
+
+  const positions = ring
+    .slice(0, -1)
+    .map(([longitude, latitude]) =>
+      Cartesian3.fromDegrees(longitude, latitude),
+    )
+
+  const entity = viewer.entities.add({
+    id: feature.properties.id,
+    name: feature.properties.name,
+    show: false,
+    polygon: {
+      hierarchy: positions,
+      height: 0,
+      heightReference: HeightReference.RELATIVE_TO_GROUND,
+      extrudedHeight: feature.properties.heightMeters,
+      extrudedHeightReference: HeightReference.RELATIVE_TO_GROUND,
+      material: Color.fromBytes(196, 190, 176, 235),
+      outline: false,
+    },
+  })
+
+  return entity
+})
+
+function setLocalGeometryVisible(visible: boolean): void {
+  for (const entity of localGeometryEntities) {
+    entity.show = visible
+  }
+}
+
 const inspectionDaylightTime =
   JulianDate.fromIso8601('2026-06-21T20:00:00Z')
 
@@ -320,6 +414,7 @@ function applyInspectionLighting(): void {
 }
 
 function applyBaseline(): void {
+  setLocalGeometryVisible(false)
   viewer.scene.globe.material = undefined
   imageryLayer.show = true
   landCoverLayer.show = false
@@ -340,6 +435,7 @@ function applyBaseline(): void {
 }
 
 function applyEstLook(): void {
+  setLocalGeometryVisible(false)
   landCoverLayer.show = false
   surfaceLayer.show = false
   surfaceTmsLayer.show = false
@@ -355,6 +451,7 @@ function applyEstLook(): void {
 }
 
 function applyLandCover(): void {
+  setLocalGeometryVisible(false)
   viewer.scene.globe.material = undefined
   imageryLayer.show = false
   landCoverLayer.show = true
@@ -371,6 +468,7 @@ function applyLandCover(): void {
 }
 
 function applyEstSurface(): void {
+  setLocalGeometryVisible(false)
   viewer.scene.globe.material = undefined
   imageryLayer.show = false
   landCoverLayer.show = false
@@ -387,6 +485,7 @@ function applyEstSurface(): void {
 }
 
 function applyEstSurfaceTms(): void {
+  setLocalGeometryVisible(false)
   viewer.scene.globe.material = undefined
   imageryLayer.show = false
   landCoverLayer.show = false
@@ -403,6 +502,7 @@ function applyEstSurfaceTms(): void {
 }
 
 function applyVisualSurface(): void {
+  setLocalGeometryVisible(false)
   viewer.scene.globe.material = undefined
   imageryLayer.show = false
   landCoverLayer.show = false
@@ -418,6 +518,7 @@ function applyVisualSurface(): void {
 }
 
 function applyContinuousSurface(): void {
+  setLocalGeometryVisible(false)
   viewer.scene.globe.material = undefined
   imageryLayer.show = false
   landCoverLayer.show = false
@@ -432,6 +533,36 @@ function applyContinuousSurface(): void {
   lookLabel.textContent = 'Est Continuous Surface'
 }
 
+function applyLocalGeometry(): void {
+  viewer.scene.globe.material = undefined
+  imageryLayer.show = true
+  landCoverLayer.show = false
+  surfaceLayer.show = false
+  surfaceTmsLayer.show = false
+  visualSurfaceTmsLayer.show = false
+  continuousSurfaceTmsLayer.show = false
+  setLocalGeometryVisible(true)
+
+  viewer.scene.globe.lambertDiffuseMultiplier = 1
+  viewer.scene.globe.atmosphereLightIntensity = 10
+
+  imageryLayer.brightness = 1
+  imageryLayer.contrast = 1
+  imageryLayer.saturation = 1
+  imageryLayer.gamma = 1
+
+  lookLabel.textContent = 'Est Local Geometry'
+
+  viewer.camera.flyTo({
+    destination: Cartesian3.fromDegrees(
+      -122.90484,
+      47.03576,
+      850,
+    ),
+    duration: 1.5,
+  })
+}
+
 estSurfaceButton.addEventListener('click', applyEstSurface)
 estSurfaceTmsButton.addEventListener(
   'click',
@@ -444,6 +575,10 @@ visualSurfaceButton.addEventListener(
 continuousSurfaceButton.addEventListener(
   'click',
   applyContinuousSurface,
+)
+localGeometryButton.addEventListener(
+  'click',
+  applyLocalGeometry,
 )
 daylightButton.addEventListener(
   'click',

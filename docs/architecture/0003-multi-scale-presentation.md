@@ -89,9 +89,28 @@ and:
 
 > Treat architectural principles as strong defaults, not purity requirements.
 
-The immediate implementation remains deliberately small: prove or disprove the
+The initial implementation remained deliberately small: prove or disprove the
 local-geometry hypothesis on one recognizable urban area before generalizing
 the architecture.
+
+That focused experiment has now succeeded. OpenStreetMap building footprints
+around the Washington State Capitol were normalized through an Est-owned
+preparation step and rendered by the Cesium adapter as terrain-relative
+extruded geometry over baseline imagery and World Terrain. The experiment
+produced 871 individually addressable building features without exposing OSM
+building semantics directly to Cesium.
+
+The result materially improved structural legibility during descent. At
+regional and campus scales, mapped buildings align with the underlying world
+and remain persistent spatial objects as the camera approaches them instead of
+degrading into enlarged raster pixels.
+
+The initial geometry is intentionally visually simple. Flat roofs, approximate
+heights, uniform materials, and missing architectural detail are not failures
+of this experiment. The success criterion is that local features can become
+persistent, independently addressable geometry capable of receiving richer
+presentation and, where appropriate in future architecture, state derived from
+the authoritative Est world.
 
 ## Consequences
 
@@ -120,8 +139,10 @@ Tradeoffs:
   possibly streaming requirements that regional raster presentation does not.
 - Visual continuity between representations becomes an explicit quality
   concern.
-- Renderer-neutral local-scene contracts may become necessary once the first
-  focused experiment proves what information they actually need.
+- The first local-scene artifact is deliberately narrow and evaluation-focused;
+  a durable general local-scene contract should be defined only as additional
+  feature classes and simulation requirements establish what information it
+  actually needs.
 
 ## Deferred Questions
 

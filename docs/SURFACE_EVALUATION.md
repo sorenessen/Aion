@@ -447,3 +447,64 @@ presentation/data boundaries needed for a larger system and remains useful at
 the scales where its source information is appropriate. The next evaluation
 moves to local geometry because the browser evidence shows that additional
 raster refinement is now solving the wrong problem.
+
+## Local-geometry checkpoint
+
+On September 12, 2026, the Washington State Capitol local-geometry experiment
+validated the first multi-scale presentation hypothesis.
+
+A small OpenStreetMap extract around the Capitol was converted through an
+Est-owned preparation boundary into a renderer-neutral GeoJSON
+FeatureCollection. Source-specific OSM building semantics are normalized
+before reaching Cesium. The initial artifact contains 871 building features.
+Each feature has an Est-defined identifier and normalized height in metres;
+the Cesium adapter consumes those prepared properties rather than interpreting
+`building`, `building:levels`, or other OSM tags.
+
+The first renderer intentionally does very little. It places the prepared
+building footprints over Cesium World Terrain and baseline World Imagery and
+extrudes them to their normalized heights. The Washington State Capitol itself
+is represented from its real mapped footprint with an 18-metre height derived
+from six mapped levels. No dome, facade, roof system, procedural architecture,
+road geometry, vegetation, props, or handcrafted Capitol detail was added.
+
+Browser evaluation strongly validated the representation change. From broader
+city and campus views, mapped structures become clearly legible spatial
+objects aligned with the underlying imagery. During close descent they remain
+geometry with position, footprint, and volume rather than becoming enlarged
+raster pixels. The experiment therefore changes the close-range problem from
+"find enough raster detail to look like a building" to "provide the geometric
+and material information needed to represent the building."
+
+Visual blandness is explicitly not a failure criterion for this checkpoint.
+Uniform light-colored extrusions, flat roofs, approximate heights, and missing
+architectural detail are expected limitations of the deliberately minimal
+proof. The important result is that local structures are now independently
+addressable presentation objects that can be enriched later without requiring
+the regional surface representation to carry street-level information.
+
+This result also preserves the value of the earlier terrain and regional
+surface work. Est-owned terrain, procedural/material surface treatment,
+satellite or aerial imagery, or combinations of those sources may continue to
+provide planetary and regional appearance. Local mapped geometry can resolve
+structures, roads, vegetation, and other features as closer viewing scales
+justify them. No single surface source is required to solve every scale.
+
+The emerging capability stack is therefore:
+
+1. terrain and elevation establish the land form;
+2. regional surface presentation establishes broad appearance;
+3. mapped or generated spatial features establish local structure;
+4. local geometry provides persistent addressable objects;
+5. authoritative Est state can eventually drive relevant object state and
+   behavior without transferring simulation ownership to the renderer;
+6. presentation can progressively enrich those objects with materials,
+   architectural detail, effects, and other scale-appropriate representations.
+
+This checkpoint does not establish final LOD distances, streaming strategy,
+planetary geometry storage, a general feature schema, or Cesium as the
+permanent local renderer. Those remain evidence-driven follow-up decisions.
+
+The next local-scene work should continue to prioritize capability over
+cosmetic polish. Uniform building materials are sufficient while Est proves
+which additional spatial structures and state-bearing boundaries are required.

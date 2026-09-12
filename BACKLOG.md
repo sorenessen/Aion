@@ -396,10 +396,12 @@ Preserve authoritative Est world state independently of presentation while
 evaluating progressively richer visual representations as camera distance
 decreases.
 
-- [ ] Prove the local-geometry hypothesis with a deliberately small Washington State Capitol campus vertical slice.
-- [ ] Acquire real building footprints for the Capitol evaluation area without committing large or disposable source extracts by default.
-- [ ] Define a renderer-neutral Est local-scene artifact for the building spike rather than exposing OSM semantics directly to Cesium.
-- [ ] Render recognizable building geometry over terrain and imagery without moving semantic or simulation ownership into Cesium.
-- [ ] Evaluate the visual transition from regional imagery at altitude to local building geometry during descent.
-- [ ] Decide from the building spike whether roads, vegetation, water features, and other local geometry should be evaluated next.
+- [x] Prove the local-geometry hypothesis with a deliberately small Washington State Capitol campus vertical slice.
+- [x] Acquire real building footprints for the Capitol evaluation area without committing large or disposable source extracts by default.
+- [x] Define a renderer-neutral Est local-scene artifact for the building spike rather than exposing OSM semantics directly to Cesium.
+- [x] Render recognizable building geometry over terrain and imagery without moving semantic or simulation ownership into Cesium.
+- [x] Evaluate the visual transition from regional imagery at altitude to local building geometry during descent.
+- [x] Decide from the building spike whether roads, vegetation, water features, and other local geometry should be evaluated next.
 - [ ] Define scale/LOD boundaries only after the local-scene experiment provides evidence for the required transition behavior.
+- [ ] Prove that Est-owned regional terrain/surface presentation and mapped local geometry can coexist in one descent path, using a terrain-rich area such as the Mount Rainier foothills when the required local feature data is available.
+- [ ] Evaluate the next local spatial capability based on simulation and world-structure value rather than cosmetic polish; likely candidates include roads or richer building structure.
