@@ -1,13 +1,19 @@
-<h1 align="center">===EST===</h1>
+<h1 align="center">=== EST ===</h1>
 
-<img width="1216" height="466" alt="Screenshot 2026-09-12 at 12 04 45 AM" src="https://github.com/user-attachments/assets/1a5425fe-1427-4e2c-818f-7a11fa8d0ae2" />
+<p align="center">
+  <img width="1216" height="466" alt="Screenshot 2026-09-12 at 12 04 45 AM" src="https://github.com/user-attachments/assets/1a5425fe-1427-4e2c-818f-7a11fa8d0ae2" />
+</p>
 
 ## A living planetary simulation.
 
-<img width="250" height="120" alt="Screenshot 2026-09-12 at 12 15 04 AM" src="https://github.com/user-attachments/assets/895fbcd6-9f3a-4e35-a544-77fc7629683c" />
-<img width="250" height="120" alt="Screenshot 2026-09-12 at 12 08 40 AM" src="https://github.com/user-attachments/assets/b1a3c767-a876-4bf4-ade0-0e979c52458e" />
-<img width="250" height="120" alt="Screenshot 2026-09-12 at 12 07 52 AM" src="https://github.com/user-attachments/assets/acbe955c-f79f-436d-be10-cb4aa3daef6e" />
+<p align="center">
+  <img width="250" height="120" alt="mount-rainier-night-terrain" src="https://github.com/user-attachments/assets/3f3123e0-af0e-41c9-94b3-ac2966fc7d5c" />
+  <img width="250" height="120" alt="Screenshot 2026-09-12 at 12 08 40 AM" src="https://github.com/user-attachments/assets/b1a3c767-a876-4bf4-ade0-0e979c52458e" />
+  <img width="250" height="120" alt="Screenshot 2026-09-12 at 12 07 52 AM" src="https://github.com/user-attachments/assets/acbe955c-f79f-436d-be10-cb4aa3daef6e" />
+</p>
 
+
+  
 
 Est is a simulation-first platform for modeling worlds as interconnected physical, environmental, biological, societal, and eventually individual systems that evolve through time.
 
@@ -30,6 +36,9 @@ Players create or fork worlds, alter conditions, advance time, influence civiliz
 ## Current Milestone
 
 ### Est 0.1 - First Light
+
+<p align="center"><img width="560" height="425" alt="earth-baseline" src="https://github.com/user-attachments/assets/bc77e758-55b6-4053-9def-8c971112c93e" /></p>
+
 
 Goal:
 
