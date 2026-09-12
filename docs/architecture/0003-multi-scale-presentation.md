@@ -139,6 +139,60 @@ This does not yet establish automatic LOD selection, streaming, detailed
 architecture, material generation, or simulation-driven local state. Those
 remain separate capabilities to prove when required.
 
+A subsequent focused experiment tested whether Est can own representation
+selection while Cesium supplies current view measurements to a
+renderer-independent presentation policy. A small TypeScript policy now proves
+that representation state can be selected outside Cesium, including hysteresis
+between experimental entry and exit thresholds. The thresholds themselves are
+not architectural decisions.
+
+The experiment also established that camera altitude alone is not a sufficient
+measure of local-representation relevance. Feature-relative distance and
+whether the local scene intersects the current view provide independent useful
+information.
+
+Several screen-space measurements were deliberately tested and rejected before
+generalizing the policy. Projecting the local scene's aggregate bounding sphere
+produced unstable significance values near or inside the sphere. Projecting all
+local-scene vertices into one clipped viewport box also failed to describe what
+was visibly on screen. These failures are useful evidence against treating one
+coarse scene bound as visual significance.
+
+A feature-aware follow-up instead measures prepared building features
+individually using terrain-correct base and roof positions. In the Longmire
+evaluation, controlled browser observations produced:
+
+- looking away at approximately 1,033 metres camera height and 309 metres
+  feature-relative distance: 0 of 59 features visible and 0.0 percent aggregate
+  feature-box coverage
+- close and centered at approximately 1,033 metres camera height and 502 metres
+  feature-relative distance: 57 of 59 features visible and 5.1 percent
+  aggregate feature-box coverage
+- farther and centered at approximately 2,073 metres camera height and 3,465
+  metres feature-relative distance: 59 of 59 features visible and 0.2 percent
+  aggregate feature-box coverage
+
+The feature-aware signal therefore changes coherently with the actual view in
+this controlled experiment, unlike the rejected aggregate measurements.
+Feature count alone is not visual significance: more features can fit into the
+view at distance while occupying much less screen area.
+
+This result supports a presentation boundary in which a renderer adapter derives
+view facts from the current camera and prepared spatial features, then passes
+renderer-neutral measurements to Est-owned presentation policy. It does not yet
+establish aggregate feature-box coverage as the final metric. The current
+measurement can double-count overlapping feature boxes and does not account for
+terrain or feature occlusion. Final metrics, thresholds, update cadence, and
+transition behavior remain deliberately unresolved.
+
+The experiment also found that representation decisions must evaluate
+sufficiently current view state. Cesium's sparse camera-changed event cadence
+made otherwise identical altitude-threshold transitions appear inconsistent.
+Evaluating from current rendered view state removed that timing artifact. This
+does not require a permanent per-frame policy implementation; it establishes
+only that renderer event cadence must not materially change semantic
+representation decisions.
+
 ## Consequences
 
 Positive:
@@ -173,8 +227,9 @@ Tradeoffs:
 
 ## Deferred Questions
 
-- Which camera distances or screen-space measures should trigger
-  representation changes.
+- Which renderer-neutral combination of camera altitude, feature-relative
+  distance, screen contribution, representation availability, and hysteresis
+  should govern representation changes.
 - Whether transitions use discrete LOD, blending, streaming, hierarchical
   spatial partitions, or another mechanism.
 - What the durable renderer-neutral local-scene contract should contain.
@@ -190,5 +245,5 @@ Tradeoffs:
 - Whether Cesium remains the long-term renderer once Est's local-scene
   requirements are better understood.
 
-These questions are deliberately deferred until focused local-geometry
-experiments provide evidence for their requirements.
+These questions remain open and will be resolved through focused experiments
+as their requirements become concrete.

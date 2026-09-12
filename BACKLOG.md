@@ -402,7 +402,12 @@ decreases.
 - [x] Render recognizable building geometry over terrain and imagery without moving semantic or simulation ownership into Cesium.
 - [x] Evaluate the visual transition from regional imagery at altitude to local building geometry during descent.
 - [x] Decide from the building spike whether roads, vegetation, water features, and other local geometry should be evaluated next.
-- [ ] Define scale/LOD boundaries only after the local-scene experiments provide sufficient evidence for the required transition behavior.
+- [ ] Define final scale/LOD boundaries only after the view-selection experiments provide sufficient evidence for transition thresholds and behavior.
 - [x] Prove that regional terrain/surface presentation and mapped local geometry can coexist in one descent path in a terrain-rich Mount Rainier environment; the Longmire evaluation preserved coherent terrain-relative building geometry from landscape scale through close descent.
 - [x] Validate the local-scene preparation/rendering boundary in materially different environments: dense Olympia civic/urban structure and sparse Longmire mountain structures.
+- [x] Prove that Est can own representation selection independently of Cesium through a renderer-neutral presentation policy with hysteresis; keep the current 2,000/3,000-metre thresholds experimental.
+- [x] Evaluate view-dependent local-scene relevance and reject camera altitude, aggregate scene-bounding-sphere projection, and one scene-wide projected footprint as sufficient standalone significance measures.
+- [x] Demonstrate a terrain-correct feature-aware view signal at Longmire: controlled observations produced 0/59 visible features and 0.0% feature-box coverage looking away, 57/59 and 5.1% close and centered, and 59/59 and 0.2% farther and centered.
+- [x] Confirm that representation evaluation must use sufficiently current view state; sparse renderer camera-change cadence must not materially alter semantic representation decisions.
+- [ ] Refine the renderer-neutral view context and significance measure before promoting feature-box coverage, thresholds, update cadence, or transition rules into production presentation policy.
 - [ ] Evaluate the next local spatial capability based on simulation and world-structure value rather than cosmetic polish; likely candidates include roads or richer building structure.
