@@ -4,6 +4,11 @@ import {
   type Viewer,
 } from 'cesium'
 
+import {
+  calculateScreenRectangleUnionCoverage,
+  type ScreenRectangle,
+} from '../presentation/screen-coverage'
+
 export interface LocalScenePresentationFeature {
   id: string
   measurementPositions: Cartesian3[]
@@ -14,6 +19,7 @@ export interface LocalSceneViewMeasurement {
   distanceToLocalSceneMeters: number
   localSceneVisibleFeatureCount: number
   localSceneFeatureBoxCoverage: number
+  localSceneFeatureBoxUnionCoverage: number
 }
 
 export interface LocalSceneViewMeasurementAdapter {
@@ -59,6 +65,8 @@ export function createLocalSceneViewMeasurementAdapter(
 
       let localSceneVisibleFeatureCount = 0
       let aggregateVisibleFeatureBoxArea = 0
+
+      const visibleFeatureRectangles: ScreenRectangle[] = []
 
       for (const feature of features) {
         let featureMinX = Number.POSITIVE_INFINITY
@@ -128,6 +136,13 @@ export function createLocalSceneViewMeasurementAdapter(
 
         localSceneVisibleFeatureCount += 1
         aggregateVisibleFeatureBoxArea += visibleArea
+
+        visibleFeatureRectangles.push({
+          minX: clippedMinX,
+          minY: clippedMinY,
+          maxX: clippedMaxX,
+          maxY: clippedMaxY,
+        })
       }
 
       const localSceneFeatureBoxCoverage =
@@ -135,11 +150,21 @@ export function createLocalSceneViewMeasurementAdapter(
           ? aggregateVisibleFeatureBoxArea / viewportArea
           : 0
 
+      const localSceneFeatureBoxUnionCoverage =
+        viewportArea > 0
+          ? calculateScreenRectangleUnionCoverage(
+              visibleFeatureRectangles,
+              canvasWidth,
+              canvasHeight,
+            )
+          : 0
+
       return {
         cameraHeightMeters,
         distanceToLocalSceneMeters,
         localSceneVisibleFeatureCount,
         localSceneFeatureBoxCoverage,
+        localSceneFeatureBoxUnionCoverage,
       }
     },
   }

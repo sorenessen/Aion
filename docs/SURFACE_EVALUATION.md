@@ -657,3 +657,166 @@ selection should be view-dependent and feature-aware, and Est can own that
 decision independently of the renderer. Final significance metrics, thresholds,
 update cadence, transition behavior, feature partitioning, residency, and
 streaming remain evidence-driven follow-up work.
+
+### Cross-environment screen-significance refinement
+
+A follow-up experiment refined the feature-aware screen-contribution diagnostic
+before allowing it to influence presentation policy.
+
+The earlier aggregate feature-box coverage sums the area of every clipped
+per-feature screen rectangle. That is useful diagnostically, but overlapping
+rectangles are counted repeatedly. A renderer-independent rectangle-union
+calculation was therefore added so the same projected feature envelopes can
+also report the fraction of the viewport covered by their geometric union.
+
+Controlled Longmire observations produced:
+
+- close and partially framed at approximately 972 metres camera height and
+  82 metres feature-relative distance: 33 of 59 features visible, 4.0 percent
+  aggregate feature-box coverage, and 3.2 percent union coverage
+- looking away at approximately 972 metres camera height and 210 metres
+  feature-relative distance: 0 of 59 features visible and 0.0 percent aggregate
+  and union coverage
+- farther and centered at approximately 1,999 metres camera height and
+  4,038 metres feature-relative distance: 59 of 59 features visible and
+  0.1 percent aggregate and union coverage
+- close and centered at approximately 982 metres camera height and 200 metres
+  feature-relative distance: 57 of 59 features visible, 6.1 percent aggregate
+  coverage, and 5.2 percent union coverage
+
+The same diagnostic was then evaluated against the existing Olympia Capitol
+local-scene asset, which contains 871 prepared building features and provides a
+materially denser environment:
+
+- farther and centered at approximately 1,159 metres camera height and
+  4,226 metres feature-relative distance: 871 of 871 features visible,
+  1.8 percent aggregate coverage, and 1.2 percent union coverage
+- close and looking away at approximately 245 metres camera height and
+  217 metres feature-relative distance: 0 of 871 features visible and
+  0.0 percent aggregate and union coverage
+- close and partially framed at approximately 245 metres camera height and
+  effectively zero feature-relative distance: 603 of 871 features visible,
+  13.5 percent aggregate coverage, and 8.0 percent union coverage
+- close and centered at approximately 245 metres camera height and 332 metres
+  feature-relative distance: 734 of 871 features visible, 26.5 percent
+  aggregate coverage, and 18.1 percent union coverage
+
+The qualitative ordering remained coherent across both environments: close
+centered views produced the strongest screen contribution, partial framing
+reduced it, distant centered views produced a small contribution, and looking
+away reduced it to zero.
+
+Olympia also made the aggregate metric's overlap inflation substantially more
+visible. In the close centered observation, aggregate feature-box coverage was
+26.5 percent while union coverage was 18.1 percent. Union coverage is therefore
+a better diagnostic than summed feature-box area for the current experiment.
+
+This still does not make projected feature rectangles Est's definition of
+visual significance. The durable presentation concept is renderer-neutral
+local-representation screen significance. The Cesium adapter may currently
+estimate that semantic value from terrain-corrected projected feature envelopes
+and their screen-space union, while another renderer may derive an equivalent
+view-relative significance value differently.
+
+`PresentationViewContext` now carries a normalized
+`localRepresentationScreenSignificance` value in addition to camera height.
+The current Cesium evaluation supplies that value from feature-box union
+coverage. A subsequent significance-aware policy experiment now requires
+nonzero screen significance in addition to the existing camera-height
+boundaries before local structures are selected or retained. This exact-zero
+gate remains experimental and does not establish final significance thresholds,
+hysteresis, or feature-box union coverage as production policy.
+
+This preserves the ownership seam:
+
+`renderer measurements -> renderer-neutral presentation significance -> Est-owned presentation policy`
+
+The remaining risk is treating the current Cesium-side estimator as the
+semantic contract. Union coverage still uses projected feature envelopes and
+is not an occlusion solution. Final significance composition, thresholds,
+update cadence, transition behavior, partitioning, residency, and streaming
+remain unresolved.
+
+### Observatory observer freedom and below-reference camera states
+
+Low-altitude stress testing of the Olympia local scene exposed an unsupported
+assumption in the experimental presentation policy. `cameraHeightMeters` had
+been required to be non-negative even though the Cesium evaluation adapter
+currently supplies `viewer.camera.positionCartographic.height` directly.
+
+A sufficiently low observer position could therefore produce a finite negative
+cartographic height and cause presentation policy validation to throw,
+terminating rendering. That is not acceptable Observatory behavior.
+
+The finding clarified a broader product and architecture principle. The Earth
+Observatory user is a privileged observer and simulation operator rather than a
+simulated world entity. The observer must remain free to inspect unconventional
+locations and orientations, including future subsurface, cave, volcano,
+water-level, interior, and similarly unusual viewpoints, subject primarily to
+actual numerical or rendering limitations.
+
+Where a scenario permits intervention, the operator may also modify simulation
+conditions or state to explore alternate outcomes. Such interventions should be
+explicit simulation operations. The world should then continue evolving from
+the altered state according to its applicable model and laws rather than
+silently suspending those laws for the operator.
+
+This differs from Est Living Worlds, where participating humans, animals,
+agents, vehicles, and other world entities may be constrained by the physical,
+behavioral, and gameplay rules appropriate to them.
+
+For presentation architecture, the resulting rules are:
+
+- presentation policy reacts to observer state but does not define observer
+  validity;
+- unusual but finite camera-derived measurements must not become errors solely
+  because they fall outside ordinary above-ground ranges;
+- Observatory observer freedom and operator authority are distinct from
+  world-entity traversal and gameplay constraints;
+- operator interventions alter simulation inputs, conditions, events, or state,
+  after which simulation laws continue governing the resulting evolution;
+- malformed or numerically unsafe measurements such as NaN or infinity may
+  still be rejected; and
+- Cesium cartographic camera height remains an experimental scale signal rather
+  than a settled renderer-neutral definition of scale.
+
+The experimental presentation policy was therefore changed to require its
+camera-height measurement to be finite rather than non-negative.
+
+### Stationary significance stability check
+
+A follow-up runtime diagnostic distinguished representation transitions caused
+by observer movement from transitions occurring while the camera pose remained
+effectively unchanged.
+
+The Cesium evaluation layer temporarily compared successive world-coordinate
+camera position and orientation vectors and counted representation transitions
+that occurred without meaningful observer movement. The diagnostic remained
+evaluation-only and did not participate in presentation-policy decisions.
+
+Stress testing Olympia included conventional views as well as unusually low,
+below-reference, interior-like, and geometry-intersecting Observatory
+viewpoints. Individual runs accumulated thousands to tens of thousands of
+`postRender` presentation checks and multiple representation transitions while
+the observer was moving.
+
+Across the tested stationary views, however, the stationary-transition count
+remained zero.
+
+This changes the interpretation of earlier runs that showed transition counts
+as high as approximately 15 near the local-scene visibility boundary. The
+available evidence now indicates that those transitions were associated with
+observer movement across the zero-significance boundary rather than spontaneous
+per-frame measurement chatter at a fixed camera pose.
+
+The experiment therefore does not currently justify adding arbitrary
+screen-significance hysteresis thresholds. The exact-zero significance rule
+remains experimental, but hysteresis or debounce should be introduced only if
+later evidence demonstrates undesirable user-visible transition behavior rather
+than merely because repeated transitions are possible during deliberate camera
+movement.
+
+The test also provided additional stress evidence for the Observatory observer
+model: below-reference and otherwise unconventional finite camera states
+continued through presentation evaluation without policy exceptions after the
+non-negative camera-height assumption was removed.

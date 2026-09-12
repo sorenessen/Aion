@@ -1,5 +1,6 @@
 export interface PresentationViewContext {
   cameraHeightMeters: number
+  localRepresentationScreenSignificance: number
 }
 
 export interface PresentationState {
@@ -21,8 +22,18 @@ export function selectPresentationState(
   previous: PresentationState,
   policy: PresentationPolicy = defaultPresentationPolicy,
 ): PresentationState {
-  if (!Number.isFinite(view.cameraHeightMeters) || view.cameraHeightMeters < 0) {
-    throw new Error('cameraHeightMeters must be a finite non-negative number.')
+  if (!Number.isFinite(view.cameraHeightMeters)) {
+    throw new Error('cameraHeightMeters must be finite.')
+  }
+
+  if (
+    !Number.isFinite(view.localRepresentationScreenSignificance)
+    || view.localRepresentationScreenSignificance < 0
+    || view.localRepresentationScreenSignificance > 1
+  ) {
+    throw new Error(
+      'localRepresentationScreenSignificance must be a finite number from 0 to 1.',
+    )
   }
 
   if (
@@ -35,15 +46,20 @@ export function selectPresentationState(
     throw new Error('Presentation policy thresholds are invalid.')
   }
 
+  const hasScreenSignificance =
+    view.localRepresentationScreenSignificance > 0
+
   if (previous.localStructuresVisible) {
     return {
       localStructuresVisible:
-        view.cameraHeightMeters <= policy.localStructuresExitHeightMeters,
+        hasScreenSignificance
+        && view.cameraHeightMeters <= policy.localStructuresExitHeightMeters,
     }
   }
 
   return {
     localStructuresVisible:
-      view.cameraHeightMeters < policy.localStructuresEnterHeightMeters,
+      hasScreenSignificance
+      && view.cameraHeightMeters < policy.localStructuresEnterHeightMeters,
   }
 }

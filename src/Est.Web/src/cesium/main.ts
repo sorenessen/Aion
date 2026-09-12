@@ -445,8 +445,10 @@ const evaluationPanelResizeObserver = new ResizeObserver(
 
 evaluationPanelResizeObserver.observe(renderEvaluationPanel)
 
-const sessionId =
-  new URLSearchParams(window.location.search).get('session')
+const queryParameters =
+  new URLSearchParams(window.location.search)
+
+const sessionId = queryParameters.get('session')
 
 if (sessionId) {
   const api = new EstApi('/api')
@@ -616,13 +618,36 @@ type LocalSceneFeatureCollection = {
   features: LocalSceneFeature[]
 }
 
-const localSceneEvaluation = {
-  name: 'Longmire',
-  url: '/evaluation/local-scene/rainier-longmire-buildings.geojson',
-  longitude: -121.8112,
-  latitude: 46.7495,
-  cameraHeight: 1800,
+const localSceneEvaluations = {
+  longmire: {
+    name: 'Longmire',
+    url: '/evaluation/local-scene/rainier-longmire-buildings.geojson',
+    longitude: -121.8112,
+    latitude: 46.7495,
+    cameraHeight: 1800,
+  },
+  olympia: {
+    name: 'Olympia',
+    url: '/evaluation/local-scene/olympia-capitol-buildings.geojson',
+    longitude: -122.90484,
+    latitude: 47.03576,
+    cameraHeight: 850,
+  },
 } as const
+
+const requestedLocalScene =
+  queryParameters.get('localScene') ?? 'longmire'
+
+if (!(requestedLocalScene in localSceneEvaluations)) {
+  throw new Error(
+    `Unsupported local-scene evaluation: ${requestedLocalScene}`,
+  )
+}
+
+const localSceneEvaluation =
+  localSceneEvaluations[
+    requestedLocalScene as keyof typeof localSceneEvaluations
+  ]
 
 const localSceneResponse = await fetch(
   localSceneEvaluation.url,
@@ -797,6 +822,7 @@ function updateAutomaticPresentationStatus(
     distanceToLocalSceneMeters,
     localSceneVisibleFeatureCount,
     localSceneFeatureBoxCoverage,
+    localSceneFeatureBoxUnionCoverage,
   } = measurement
 
   const representation =
@@ -813,9 +839,12 @@ function updateAutomaticPresentationStatus(
   const featureBoxCoverageLabel =
     (localSceneFeatureBoxCoverage * 100).toFixed(1)
 
+  const featureBoxUnionCoverageLabel =
+    (localSceneFeatureBoxUnionCoverage * 100).toFixed(1)
+
   presentationStatus.textContent =
     `Live: ${formatMeters(cameraHeightMeters)} m high / ${formatMeters(distanceToLocalSceneMeters)} m away`
-    + ` · Longmire: visible features ${localSceneVisibleFeatureCount}/${localScenePresentationFeatures.length} / feature boxes ${featureBoxCoverageLabel}%`
+    + ` · ${localSceneEvaluation.name}: visible features ${localSceneVisibleFeatureCount}/${localScenePresentationFeatures.length} / feature boxes ${featureBoxCoverageLabel}% aggregate / ${featureBoxUnionCoverageLabel}% union`
     + ` · Last evaluation: ${lastEvaluation}`
     + ` · Decision: ${representation}`
     + ` · Checks: ${automaticPolicyCheckCount}`
@@ -844,7 +873,11 @@ function applyAutomaticPresentation(): void {
     automaticPresentationState
 
   automaticPresentationState = selectPresentationState(
-    { cameraHeightMeters },
+    {
+      cameraHeightMeters,
+      localRepresentationScreenSignificance:
+        measurement.localSceneFeatureBoxUnionCoverage,
+    },
     previousPresentationState,
   )
 

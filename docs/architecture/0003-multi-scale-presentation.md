@@ -193,6 +193,122 @@ does not require a permanent per-frame policy implementation; it establishes
 only that renderer event cadence must not materially change semantic
 representation decisions.
 
+
+### Observatory observer and simulation operator
+
+The Earth Observatory user is a privileged observer and simulation operator,
+not a simulated world entity.
+
+As an observer, the user must be able to inspect the simulation from
+unconventional viewpoints without inheriting the traversal constraints that
+apply to entities inside the simulated world. Valid Observatory viewpoints may
+eventually include below-reference altitude, subsurface locations, caves,
+volcano interiors, water-level viewpoints, extremely close geometry, and
+upward-looking orientations.
+
+As an operator, the user may also be granted explicit scenario-dependent
+authority to intervene in simulation conditions or state. Examples include
+starting or suppressing a forest fire, introducing an earthquake scenario,
+remediating pollution, changing conditions intended to avert an economic
+collapse, or exploring other counterfactual, mitigation, disaster, and recovery
+branches.
+
+Operator authority does not imply bypassing the simulation model. An
+intervention should change an input, condition, event, or state through an
+explicit simulation operation. The simulation then continues evolving from the
+altered state according to the applicable model and laws. This preserves the
+distinction between changing the circumstances of an experiment and silently
+changing the rules that govern its consequences.
+
+Est Living Worlds has a different relationship to those laws. Humans, animals,
+agents, vehicles, and other participating world entities may be constrained by
+collision, locomotion, gravity, access, capability, behavior, and other
+simulation or gameplay rules. Those constraints must not leak downward into
+Observatory's privileged observer model merely because the products share world
+and simulation foundations.
+
+Presentation policy follows the same separation of responsibility. It reacts to
+observer state; it does not define observer-state validity. An unusual but
+finite observer state must not become an application error merely because a
+presentation heuristic falls outside a conventional above-ground range.
+Malformed or numerically unsafe values such as NaN, infinity, or explicitly
+unsupported renderer states may still be rejected.
+
+The current `cameraHeightMeters` input remains an experimental renderer-derived
+scale signal. In the Cesium evaluation adapter it is sourced directly from
+`viewer.camera.positionCartographic.height`. That measurement is useful for the
+current experiment but is not a settled renderer-neutral definition of
+presentation scale or a constraint on where the Observatory observer may go.
+
+### Stationary transition diagnostic
+
+A runtime follow-up tested whether render-cadence evaluation could cause local
+representation selection to chatter while the observer remained stationary.
+Temporary Cesium-only instrumentation compared successive world-coordinate
+camera poses and separately counted representation transitions occurring
+without meaningful camera movement.
+
+Across stress-tested Olympia views, including unconventional low and
+below-reference Observatory viewpoints, stationary transitions remained zero
+through thousands to tens of thousands of presentation evaluations. Transitions
+observed in earlier runs are therefore currently attributable to observer
+movement across the experimental zero-significance boundary rather than
+demonstrated fixed-view measurement instability.
+
+No significance hysteresis or debounce is promoted into renderer-neutral
+presentation policy on the basis of this experiment. Such behavior should be
+added only in response to demonstrated transition-quality problems.
+
+### Renderer-neutral screen-significance refinement
+
+A cross-environment follow-up compared summed per-feature screen rectangles
+with the geometric union of those rectangles. The union calculation is
+renderer-independent and removes repeated area caused by overlapping projected
+feature boxes.
+
+At Longmire, union coverage remained coherent across controlled views: it was
+0.0 percent looking away, 0.1 percent farther and centered, 3.2 percent close
+and partially framed, and 5.2 percent close and centered.
+
+The same ordering held in the much denser Olympia evaluation: 0.0 percent
+looking away, 1.2 percent farther and centered, 8.0 percent close and partially
+framed, and 18.1 percent close and centered. Olympia also exposed substantial
+overlap inflation in the summed diagnostic; the close centered view reported
+26.5 percent aggregate feature-box coverage versus 18.1 percent union
+coverage.
+
+This strengthens two architectural conclusions.
+
+First, camera altitude cannot independently express local-representation
+relevance. At Olympia, views at approximately the same 245-metre camera height
+produced either zero screen contribution when looking away or strong screen
+contribution when centered on the local structures.
+
+Second, projected feature boxes should remain an adapter-side estimation
+technique rather than become the presentation-policy contract. The
+renderer-neutral concept is local-representation screen significance. A
+renderer may derive that value from whatever view and representation
+measurements are appropriate without exposing renderer objects or
+renderer-specific visibility machinery to Est-owned policy.
+
+`PresentationViewContext` therefore now accepts a normalized
+`localRepresentationScreenSignificance` value. The Cesium evaluation currently
+maps feature-box union coverage into that semantic field. The experimental
+policy now requires nonzero screen significance in addition to the existing
+camera-height boundaries before local structures are selected or retained.
+This zero-significance gate is an experimental composition rule, not a final
+significance threshold or a commitment to feature-box union coverage.
+
+The intended boundary is:
+
+`renderer measurements -> renderer-neutral presentation significance -> Est-owned presentation policy`
+
+This does not establish union coverage as the final significance estimator.
+The current estimator is still based on projected feature envelopes and does
+not solve occlusion. It establishes a cleaner semantic seam while preserving
+freedom to replace the renderer-side measurement technique.
+
+
 ## Consequences
 
 Positive:
