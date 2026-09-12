@@ -1,9 +1,19 @@
 import 'cesium/Build/Cesium/Widgets/widgets.css'
 import '../style.css'
 import { EstApi } from '../api/est-api'
+import {
+  selectPresentationState,
+  type PresentationState,
+} from '../presentation/presentation-policy'
+import {
+  createLocalSceneViewMeasurementAdapter,
+  type LocalScenePresentationFeature,
+  type LocalSceneViewMeasurement,
+} from './local-scene-view-measurement'
 
 import {
   Cartesian3,
+  Cartographic,
   Color,
   createWorldTerrainAsync,
   HeightReference,
@@ -12,6 +22,7 @@ import {
   JulianDate,
   Material,
   Rectangle,
+  sampleTerrainMostDetailed,
   SingleTileImageryProvider,
   TileMapServiceImageryProvider,
   Viewer,
@@ -34,30 +45,72 @@ if (!app) {
   throw new Error('Application root was not found.')
 }
 
-app.innerHTML = `
+const appRoot = app
+
+appRoot.innerHTML = `
   <div id="cesiumContainer" aria-label="Est Cesium globe evaluation"></div>
 
-  <section class="render-evaluation-panel">
-    <div class="render-evaluation-heading">
-      <strong>Est Rendering Evaluation</strong>
-      <span id="lookLabel">Baseline</span>
+  <section
+    id="renderEvaluationPanel"
+    class="render-evaluation-panel"
+  >
+    <div
+      id="renderEvaluationDragHandle"
+      class="render-evaluation-heading"
+    >
+      <div class="render-evaluation-heading-copy">
+        <strong>Est Rendering Evaluation</strong>
+        <div class="render-evaluation-mode">
+          <span class="render-evaluation-mode-label">Mode:</span>
+          <span id="lookLabel">Baseline</span>
+        </div>
+      </div>
+
+      <div class="render-evaluation-window-actions">
+        <button
+          id="renderEvaluationCollapseButton"
+          type="button"
+          aria-label="Collapse rendering evaluation panel"
+          aria-expanded="true"
+          title="Collapse panel"
+        >−</button>
+        <button
+          id="renderEvaluationHideButton"
+          type="button"
+          aria-label="Hide rendering evaluation panel"
+          title="Hide panel"
+        >×</button>
+      </div>
     </div>
 
-    <div class="render-evaluation-actions">
-      <button id="baselineButton" type="button">Baseline</button>
-      <button id="estButton" type="button">Terrain Study</button>
-      <button id="landCoverButton" type="button">Land Cover</button>
-      <button id="estSurfaceButton" type="button">Est Surface Study</button>
-      <button id="estSurfaceTmsButton" type="button">Est Surface TMS</button>
-      <button id="visualSurfaceButton" type="button">Est Visual Surface</button>
-      <button id="continuousSurfaceButton" type="button">Est Continuous Surface</button>
-      <button id="localGeometryButton" type="button">Local Geometry</button>
-      <button id="terrainGeometryButton" type="button">Est Terrain + Geometry</button>
-      <button id="daylightButton" type="button" aria-pressed="false">Lighting: Real Time</button>
-    </div>
+    <div id="renderEvaluationBody">
+      <div class="render-evaluation-actions">
+        <button id="baselineButton" type="button">Baseline</button>
+        <button id="estButton" type="button">Terrain Study</button>
+        <button id="landCoverButton" type="button">Land Cover</button>
+        <button id="estSurfaceButton" type="button">Est Surface Study</button>
+        <button id="estSurfaceTmsButton" type="button">Est Surface TMS</button>
+        <button id="visualSurfaceButton" type="button">Est Visual Surface</button>
+        <button id="continuousSurfaceButton" type="button">Est Continuous Surface</button>
+        <button id="localGeometryButton" type="button">Local Geometry</button>
+        <button id="terrainGeometryButton" type="button">Est Terrain + Geometry</button>
+        <button id="automaticScaleButton" type="button">Automatic Scale</button>
+        <button id="daylightButton" type="button" aria-pressed="false">Lighting: Real Time</button>
+      </div>
 
-    <div id="sessionStatus">No simulation session selected.</div>
+      <div id="presentationStatus">Automatic scale inactive.</div>
+      <div id="sessionStatus">No simulation session selected.</div>
+    </div>
   </section>
+
+  <button
+    id="renderEvaluationRestoreButton"
+    class="render-evaluation-restore"
+    type="button"
+    aria-label="Show Est rendering evaluation panel"
+    title="Show rendering evaluation panel"
+    hidden
+  >Est</button>
 `
 
 const terrainProvider = await createWorldTerrainAsync({
@@ -146,14 +199,251 @@ const localGeometryButton =
 const terrainGeometryButton =
   requireElement<HTMLButtonElement>('#terrainGeometryButton')
 
+const automaticScaleButton =
+  requireElement<HTMLButtonElement>('#automaticScaleButton')
+
 const daylightButton =
   requireElement<HTMLButtonElement>('#daylightButton')
 
 const lookLabel =
   requireElement<HTMLSpanElement>('#lookLabel')
 
+const presentationStatus =
+  requireElement<HTMLDivElement>('#presentationStatus')
+
 const sessionStatus =
   requireElement<HTMLDivElement>('#sessionStatus')
+
+const renderEvaluationPanel =
+  requireElement<HTMLElement>('#renderEvaluationPanel')
+
+const renderEvaluationDragHandle =
+  requireElement<HTMLDivElement>('#renderEvaluationDragHandle')
+
+const renderEvaluationBody =
+  requireElement<HTMLDivElement>('#renderEvaluationBody')
+
+const renderEvaluationCollapseButton =
+  requireElement<HTMLButtonElement>(
+    '#renderEvaluationCollapseButton',
+  )
+
+const renderEvaluationHideButton =
+  requireElement<HTMLButtonElement>(
+    '#renderEvaluationHideButton',
+  )
+
+const renderEvaluationRestoreButton =
+  requireElement<HTMLButtonElement>(
+    '#renderEvaluationRestoreButton',
+  )
+
+const panelViewportMargin = 8
+
+function clampEvaluationPanelToViewport(): void {
+  if (renderEvaluationPanel.hidden) {
+    return
+  }
+
+  const panelRect = renderEvaluationPanel.getBoundingClientRect()
+  const appRect = appRoot.getBoundingClientRect()
+
+  const maxLeft = Math.max(
+    panelViewportMargin,
+    appRect.width - panelRect.width - panelViewportMargin,
+  )
+
+  const maxTop = Math.max(
+    panelViewportMargin,
+    appRect.height - panelRect.height - panelViewportMargin,
+  )
+
+  const currentLeft =
+    Number.parseFloat(renderEvaluationPanel.style.left)
+    || panelRect.left - appRect.left
+
+  const currentTop =
+    Number.parseFloat(renderEvaluationPanel.style.top)
+    || panelRect.top - appRect.top
+
+  renderEvaluationPanel.style.left =
+    `${Math.min(Math.max(currentLeft, panelViewportMargin), maxLeft)}px`
+
+  renderEvaluationPanel.style.top =
+    `${Math.min(Math.max(currentTop, panelViewportMargin), maxTop)}px`
+}
+
+let panelDragPointerId: number | undefined
+let panelDragStartPointerX = 0
+let panelDragStartPointerY = 0
+let panelDragStartLeft = 0
+let panelDragStartTop = 0
+
+renderEvaluationDragHandle.addEventListener(
+  'pointerdown',
+  (event) => {
+    if (
+      event.target instanceof Element
+      && event.target.closest('button')
+    ) {
+      return
+    }
+
+    const panelRect =
+      renderEvaluationPanel.getBoundingClientRect()
+    const appRect = appRoot.getBoundingClientRect()
+
+    panelDragPointerId = event.pointerId
+    panelDragStartPointerX = event.clientX
+    panelDragStartPointerY = event.clientY
+    panelDragStartLeft = panelRect.left - appRect.left
+    panelDragStartTop = panelRect.top - appRect.top
+
+    renderEvaluationDragHandle.setPointerCapture(
+      event.pointerId,
+    )
+
+    renderEvaluationPanel.classList.add('is-dragging')
+    event.preventDefault()
+  },
+)
+
+renderEvaluationDragHandle.addEventListener(
+  'pointermove',
+  (event) => {
+    if (panelDragPointerId !== event.pointerId) {
+      return
+    }
+
+    const panelRect =
+      renderEvaluationPanel.getBoundingClientRect()
+    const appRect = appRoot.getBoundingClientRect()
+
+    const maxLeft = Math.max(
+      panelViewportMargin,
+      appRect.width - panelRect.width - panelViewportMargin,
+    )
+
+    const maxTop = Math.max(
+      panelViewportMargin,
+      appRect.height - panelRect.height - panelViewportMargin,
+    )
+
+    const requestedLeft =
+      panelDragStartLeft
+      + event.clientX
+      - panelDragStartPointerX
+
+    const requestedTop =
+      panelDragStartTop
+      + event.clientY
+      - panelDragStartPointerY
+
+    renderEvaluationPanel.style.left =
+      `${Math.min(
+        Math.max(requestedLeft, panelViewportMargin),
+        maxLeft,
+      )}px`
+
+    renderEvaluationPanel.style.top =
+      `${Math.min(
+        Math.max(requestedTop, panelViewportMargin),
+        maxTop,
+      )}px`
+  },
+)
+
+function finishEvaluationPanelDrag(event: PointerEvent): void {
+  if (panelDragPointerId !== event.pointerId) {
+    return
+  }
+
+  if (
+    renderEvaluationDragHandle.hasPointerCapture(
+      event.pointerId,
+    )
+  ) {
+    renderEvaluationDragHandle.releasePointerCapture(
+      event.pointerId,
+    )
+  }
+
+  panelDragPointerId = undefined
+  renderEvaluationPanel.classList.remove('is-dragging')
+}
+
+renderEvaluationDragHandle.addEventListener(
+  'pointerup',
+  finishEvaluationPanelDrag,
+)
+
+renderEvaluationDragHandle.addEventListener(
+  'pointercancel',
+  finishEvaluationPanelDrag,
+)
+
+renderEvaluationCollapseButton.addEventListener(
+  'click',
+  () => {
+    const collapsed =
+      !renderEvaluationPanel.classList.contains('is-collapsed')
+
+    renderEvaluationPanel.classList.toggle(
+      'is-collapsed',
+      collapsed,
+    )
+
+    renderEvaluationBody.hidden = collapsed
+
+    renderEvaluationCollapseButton.textContent =
+      collapsed ? '+' : '−'
+
+    renderEvaluationCollapseButton.setAttribute(
+      'aria-expanded',
+      String(!collapsed),
+    )
+
+    renderEvaluationCollapseButton.setAttribute(
+      'aria-label',
+      collapsed
+        ? 'Expand rendering evaluation panel'
+        : 'Collapse rendering evaluation panel',
+    )
+
+    renderEvaluationCollapseButton.title =
+      collapsed ? 'Expand panel' : 'Collapse panel'
+
+    requestAnimationFrame(clampEvaluationPanelToViewport)
+  },
+)
+
+renderEvaluationHideButton.addEventListener(
+  'click',
+  () => {
+    renderEvaluationPanel.hidden = true
+    renderEvaluationRestoreButton.hidden = false
+  },
+)
+
+renderEvaluationRestoreButton.addEventListener(
+  'click',
+  () => {
+    renderEvaluationRestoreButton.hidden = true
+    renderEvaluationPanel.hidden = false
+    requestAnimationFrame(clampEvaluationPanelToViewport)
+  },
+)
+
+window.addEventListener(
+  'resize',
+  () => requestAnimationFrame(clampEvaluationPanelToViewport),
+)
+
+const evaluationPanelResizeObserver = new ResizeObserver(
+  () => requestAnimationFrame(clampEvaluationPanelToViewport),
+)
+
+evaluationPanelResizeObserver.observe(renderEvaluationPanel)
 
 const sessionId =
   new URLSearchParams(window.location.search).get('session')
@@ -354,6 +644,17 @@ if (
   throw new Error('Unsupported Est local-scene evaluation asset.')
 }
 
+type PendingLocalScenePresentationFeature = {
+  id: string
+  heightMeters: number
+  terrainPositions: Cartographic[]
+}
+
+const localScenePresentationFeatures: LocalScenePresentationFeature[] = []
+
+const pendingLocalScenePresentationFeatures:
+  PendingLocalScenePresentationFeature[] = []
+
 const localGeometryEntities = localScene.features.map((feature) => {
   if (
     feature.geometry.type !== 'Polygon'
@@ -379,6 +680,16 @@ const localGeometryEntities = localScene.features.map((feature) => {
       Cartesian3.fromDegrees(longitude, latitude),
     )
 
+  pendingLocalScenePresentationFeatures.push({
+    id: feature.properties.id,
+    heightMeters: feature.properties.heightMeters,
+    terrainPositions: ring
+      .slice(0, -1)
+      .map(([longitude, latitude]) =>
+        Cartographic.fromDegrees(longitude, latitude),
+      ),
+  })
+
   const entity = viewer.entities.add({
     id: feature.properties.id,
     name: feature.properties.name,
@@ -397,10 +708,190 @@ const localGeometryEntities = localScene.features.map((feature) => {
   return entity
 })
 
+const localSceneTerrainSamples =
+  pendingLocalScenePresentationFeatures.flatMap(
+    (feature) => feature.terrainPositions,
+  )
+
+await sampleTerrainMostDetailed(
+  terrainProvider,
+  localSceneTerrainSamples,
+)
+
+for (const feature of pendingLocalScenePresentationFeatures) {
+  const basePositions: Cartesian3[] = []
+  const roofPositions: Cartesian3[] = []
+
+  for (const terrainPosition of feature.terrainPositions) {
+    if (!Number.isFinite(terrainPosition.height)) {
+      throw new Error(
+        `Could not resolve terrain height for local-scene feature: ${feature.id}`,
+      )
+    }
+
+    const terrainHeight = terrainPosition.height
+
+    basePositions.push(
+      Cartesian3.fromRadians(
+        terrainPosition.longitude,
+        terrainPosition.latitude,
+        terrainHeight,
+      ),
+    )
+
+    roofPositions.push(
+      Cartesian3.fromRadians(
+        terrainPosition.longitude,
+        terrainPosition.latitude,
+        terrainHeight + feature.heightMeters,
+      ),
+    )
+  }
+
+  localScenePresentationFeatures.push({
+    id: feature.id,
+    measurementPositions: [
+      ...basePositions,
+      ...roofPositions,
+    ],
+  })
+}
+
+const localSceneViewMeasurement =
+  createLocalSceneViewMeasurementAdapter(
+    viewer,
+    localScenePresentationFeatures,
+  )
+
 function setLocalGeometryVisible(visible: boolean): void {
   for (const entity of localGeometryEntities) {
     entity.show = visible
   }
+}
+
+let automaticScaleEnabled = false
+
+let automaticPresentationState: PresentationState = {
+  localStructuresVisible: false,
+}
+
+let automaticPolicyCheckCount = 0
+let automaticRepresentationTransitionCount = 0
+
+let lastPolicyEvaluationHeightMeters: number | undefined
+let lastPolicyEvaluationDistanceMeters: number | undefined
+
+function formatMeters(value: number): string {
+  return Math.round(value).toLocaleString()
+}
+
+function updateAutomaticPresentationStatus(
+  measurement: LocalSceneViewMeasurement,
+): void {
+  if (!automaticScaleEnabled) {
+    return
+  }
+
+  const {
+    cameraHeightMeters,
+    distanceToLocalSceneMeters,
+    localSceneVisibleFeatureCount,
+    localSceneFeatureBoxCoverage,
+  } = measurement
+
+  const representation =
+    automaticPresentationState.localStructuresVisible
+      ? 'regional + local structures'
+      : 'regional only'
+
+  const lastEvaluation =
+    lastPolicyEvaluationHeightMeters === undefined
+    || lastPolicyEvaluationDistanceMeters === undefined
+      ? 'none'
+      : `${formatMeters(lastPolicyEvaluationHeightMeters)} m high / ${formatMeters(lastPolicyEvaluationDistanceMeters)} m away`
+
+  const featureBoxCoverageLabel =
+    (localSceneFeatureBoxCoverage * 100).toFixed(1)
+
+  presentationStatus.textContent =
+    `Live: ${formatMeters(cameraHeightMeters)} m high / ${formatMeters(distanceToLocalSceneMeters)} m away`
+    + ` · Longmire: visible features ${localSceneVisibleFeatureCount}/${localScenePresentationFeatures.length} / feature boxes ${featureBoxCoverageLabel}%`
+    + ` · Last evaluation: ${lastEvaluation}`
+    + ` · Decision: ${representation}`
+    + ` · Checks: ${automaticPolicyCheckCount}`
+    + ` · Transitions: ${automaticRepresentationTransitionCount}`
+}
+
+function disableAutomaticScale(): void {
+  automaticScaleEnabled = false
+  presentationStatus.textContent = 'Automatic scale inactive.'
+}
+
+function applyAutomaticPresentation(): void {
+  if (!automaticScaleEnabled) {
+    return
+  }
+
+  const measurement =
+    localSceneViewMeasurement.measure()
+
+  const {
+    cameraHeightMeters,
+    distanceToLocalSceneMeters,
+  } = measurement
+
+  const previousPresentationState =
+    automaticPresentationState
+
+  automaticPresentationState = selectPresentationState(
+    { cameraHeightMeters },
+    previousPresentationState,
+  )
+
+  automaticPolicyCheckCount += 1
+  lastPolicyEvaluationHeightMeters = cameraHeightMeters
+  lastPolicyEvaluationDistanceMeters =
+    distanceToLocalSceneMeters
+
+  if (
+    automaticPresentationState.localStructuresVisible
+    !== previousPresentationState.localStructuresVisible
+  ) {
+    automaticRepresentationTransitionCount += 1
+  }
+
+  setLocalGeometryVisible(
+    automaticPresentationState.localStructuresVisible,
+  )
+
+  lookLabel.textContent = 'Automatic Scale'
+  updateAutomaticPresentationStatus(measurement)
+}
+
+function enableAutomaticScale(): void {
+  automaticScaleEnabled = true
+  automaticPolicyCheckCount = 0
+  automaticRepresentationTransitionCount = 0
+  lastPolicyEvaluationHeightMeters = undefined
+  lastPolicyEvaluationDistanceMeters = undefined
+
+  viewer.scene.globe.material = undefined
+  imageryLayer.show = true
+  landCoverLayer.show = false
+  surfaceLayer.show = false
+  surfaceTmsLayer.show = false
+  visualSurfaceTmsLayer.show = false
+  continuousSurfaceTmsLayer.show = false
+
+  viewer.scene.globe.lambertDiffuseMultiplier = 1
+  viewer.scene.globe.atmosphereLightIntensity = 10
+
+  imageryLayer.brightness = 1
+  imageryLayer.contrast = 1
+  imageryLayer.saturation = 1
+  imageryLayer.gamma = 1
+
+  applyAutomaticPresentation()
 }
 
 const inspectionDaylightTime =
@@ -426,6 +917,7 @@ function applyInspectionLighting(): void {
 }
 
 function applyBaseline(): void {
+  disableAutomaticScale()
   setLocalGeometryVisible(false)
   viewer.scene.globe.material = undefined
   imageryLayer.show = true
@@ -447,6 +939,7 @@ function applyBaseline(): void {
 }
 
 function applyEstLook(): void {
+  disableAutomaticScale()
   setLocalGeometryVisible(false)
   landCoverLayer.show = false
   surfaceLayer.show = false
@@ -463,6 +956,7 @@ function applyEstLook(): void {
 }
 
 function applyLandCover(): void {
+  disableAutomaticScale()
   setLocalGeometryVisible(false)
   viewer.scene.globe.material = undefined
   imageryLayer.show = false
@@ -480,6 +974,7 @@ function applyLandCover(): void {
 }
 
 function applyEstSurface(): void {
+  disableAutomaticScale()
   setLocalGeometryVisible(false)
   viewer.scene.globe.material = undefined
   imageryLayer.show = false
@@ -497,6 +992,7 @@ function applyEstSurface(): void {
 }
 
 function applyEstSurfaceTms(): void {
+  disableAutomaticScale()
   setLocalGeometryVisible(false)
   viewer.scene.globe.material = undefined
   imageryLayer.show = false
@@ -514,6 +1010,7 @@ function applyEstSurfaceTms(): void {
 }
 
 function applyVisualSurface(): void {
+  disableAutomaticScale()
   setLocalGeometryVisible(false)
   viewer.scene.globe.material = undefined
   imageryLayer.show = false
@@ -530,6 +1027,7 @@ function applyVisualSurface(): void {
 }
 
 function applyContinuousSurface(): void {
+  disableAutomaticScale()
   setLocalGeometryVisible(false)
   viewer.scene.globe.material = undefined
   imageryLayer.show = false
@@ -557,6 +1055,7 @@ function flyToLocalSceneEvaluation(): void {
 }
 
 function applyLocalGeometry(): void {
+  disableAutomaticScale()
   viewer.scene.globe.material = undefined
   imageryLayer.show = true
   landCoverLayer.show = false
@@ -580,6 +1079,7 @@ function applyLocalGeometry(): void {
 }
 
 function applyTerrainGeometry(): void {
+  disableAutomaticScale()
   imageryLayer.show = false
   landCoverLayer.show = false
   surfaceLayer.show = false
@@ -617,6 +1117,13 @@ localGeometryButton.addEventListener(
 terrainGeometryButton.addEventListener(
   'click',
   applyTerrainGeometry,
+)
+automaticScaleButton.addEventListener(
+  'click',
+  enableAutomaticScale,
+)
+viewer.scene.postRender.addEventListener(
+  applyAutomaticPresentation,
 )
 daylightButton.addEventListener(
   'click',

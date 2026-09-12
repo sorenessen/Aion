@@ -567,3 +567,93 @@ geometry streaming, planetary local-feature storage, detailed building
 generation, material generation, vegetation geometry, road geometry, or
 simulation-driven building behavior. Those remain evidence-driven follow-up
 work.
+
+## View-dependent representation-selection checkpoint
+
+On September 12, 2026, the multi-scale presentation evaluation moved from
+proving that local geometry works to investigating when that geometry should
+participate in the current representation.
+
+The experiment deliberately separates presentation policy from Cesium. An
+Est-owned TypeScript policy accepts renderer-neutral view context and returns
+presentation state. The initial policy uses camera height with experimental
+2,000-metre entry and 3,000-metre exit thresholds. Hysteresis proved useful for
+preventing representation flicker, but these values are evaluation parameters,
+not committed LOD boundaries.
+
+The first runtime experiment also exposed an update-cadence problem. Evaluating
+the policy from Cesium's sparse camera-changed event produced visibly different
+transition timing during otherwise comparable camera movement. Evaluating
+against sufficiently current rendered view state removed that artifact. This
+does not establish that production policy must execute every frame. It
+establishes that renderer event cadence must not materially alter Est's
+semantic representation decision.
+
+Camera height alone is also insufficient. A camera can remain at approximately
+the same altitude while looking directly at a local scene, looking away from
+it, or occupying materially different positions relative to its features.
+Feature-relative distance and current-view relevance therefore carry
+information that altitude does not.
+
+Several candidate screen-space measurements were tested before accepting any
+architectural signal. Projecting one bounding sphere around the complete
+Longmire scene produced unstable and exaggerated values near or inside the
+sphere. In controlled close views, the sphere-derived significance could exceed
+100 percent while failing to describe the actual visible building contribution.
+A second experiment projected all local-scene footprint vertices into one
+clipped viewport rectangle. That also failed in the close-range regime and
+treated the settlement too much like one spatial object.
+
+The next experiment changed the measurement unit from the complete scene to
+individual prepared features. Each building is evaluated independently from
+its footprint geometry. Initial feature measurements also failed because roof
+positions were accidentally constructed from building height as absolute
+ellipsoid height while the rendered Cesium entities use heights relative to
+terrain. At Longmire this placed the diagnostic geometry far below the rendered
+structures.
+
+The corrected experiment samples each building footprint against the same World
+Terrain provider used by the viewer. Measurement geometry then uses the sampled
+terrain elevation for base positions and terrain elevation plus normalized
+`heightMeters` for roof positions. This makes the diagnostic geometry occupy
+the same vertical world-space regime as the rendered terrain-relative
+structures.
+
+Controlled browser observations on the main display then produced coherent
+feature-aware results:
+
+- looking away at approximately 1,033 metres camera height and 309 metres
+  feature-relative distance: 0 of 59 features visible and 0.0 percent aggregate
+  feature-box coverage
+- close and centered at approximately 1,033 metres camera height and 502 metres
+  feature-relative distance: 57 of 59 features visible and 5.1 percent
+  aggregate feature-box coverage
+- farther and centered at approximately 2,073 metres camera height and 3,465
+  metres feature-relative distance: 59 of 59 features visible and 0.2 percent
+  aggregate feature-box coverage
+
+These observations are important for two reasons. First, the feature-aware
+screen contribution changes with what is actually important in the current
+view: it falls to zero when looking away, becomes materially larger during
+close inspection, and becomes small when the same local scene is viewed from
+farther away. Second, visible feature count alone is not a significance metric.
+More Longmire buildings fit into the farther view even though their aggregate
+screen contribution is much smaller.
+
+The result supports a presentation architecture in which the renderer adapter
+derives current view facts from the camera and available spatial
+representations, while Est-owned presentation policy decides which
+representations should participate. The policy should consume renderer-neutral
+facts rather than Cesium objects or Cesium-specific visibility concepts.
+
+Do not promote aggregate feature-box coverage itself to production policy yet.
+The current diagnostic sums clipped per-feature screen rectangles, so
+overlapping rectangles can be counted more than once. It is also not an
+occlusion solution and does not yet establish how terrain, structures, or other
+features should hide one another for significance purposes.
+
+The validated result is narrower and more useful: local-representation
+selection should be view-dependent and feature-aware, and Est can own that
+decision independently of the renderer. Final significance metrics, thresholds,
+update cadence, transition behavior, feature partitioning, residency, and
+streaming remain evidence-driven follow-up work.
