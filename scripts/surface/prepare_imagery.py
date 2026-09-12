@@ -2,11 +2,13 @@
 
 """Prepare continuous imagery presentation input for Est.
 
-Sentinel-2 visual imagery is normalized onto Est's existing regional
-metric working grid. Source acquisition and mosaicking details remain
-inside this preparation boundary so downstream presentation code can
-consume a generic aligned RGB field without knowing about Sentinel,
-MGRS, STAC, or source-scene geometry.
+Sentinel-2 visual imagery is normalized onto an Est-owned regional
+visual grid derived from the semantic reference CRS and bounds. The visual
+grid preserves source-appropriate presentation detail independently of the
+semantic raster resolution. Source acquisition and mosaicking details remain
+inside this preparation boundary so downstream presentation code can consume
+a generic RGB field without knowing about Sentinel, MGRS, STAC, or
+source-scene geometry.
 
 The generated imagery is a presentation input. It is not authoritative
 Est simulation semantics.
@@ -22,6 +24,8 @@ from pathlib import Path
 import numpy as np
 import rasterio
 from rasterio.enums import Resampling
+from rasterio.transform import from_origin
+from rasterio.warp import reproject
 from rasterio.vrt import WarpedVRT
 
 
@@ -45,7 +49,9 @@ DEFAULT_OUTPUT_DIRECTORY = (
 IMAGERY_FILENAME = "aligned-visual-rgb.tif"
 MANIFEST_FILENAME = "imagery-manifest.json"
 
-MAX_ISOLATED_PIXEL_REPAIRS = 16
+MAX_ENCLOSED_GAP_COMPONENT_PIXELS = 32
+MAX_ENCLOSED_GAP_TOTAL_PIXELS = 512
+VISUAL_RESOLUTION_METRES = 10.0
 
 
 @dataclass(frozen=True)
@@ -259,6 +265,76 @@ def read_reference(
         )
 
 
+
+def create_visual_grid(
+    bounds: rasterio.coords.BoundingBox,
+    resolution_metres: float = VISUAL_RESOLUTION_METRES,
+) -> tuple[rasterio.Affine, int, int, tuple[float, float]]:
+    if resolution_metres <= 0:
+        raise ValueError("Visual resolution must be greater than zero.")
+
+    span_x = bounds.right - bounds.left
+    span_y = bounds.top - bounds.bottom
+
+    width_float = span_x / resolution_metres
+    height_float = span_y / resolution_metres
+
+    width = int(round(width_float))
+    height = int(round(height_float))
+
+    tolerance = 1e-9
+
+    if (
+        abs(width_float - width) > tolerance
+        or abs(height_float - height) > tolerance
+    ):
+        raise RuntimeError(
+            "Reference bounds are not evenly divisible by the requested "
+            f"{resolution_metres:g} metre visual resolution."
+        )
+
+    transform = from_origin(
+        bounds.left,
+        bounds.top,
+        resolution_metres,
+        resolution_metres,
+    )
+
+    return (
+        transform,
+        width,
+        height,
+        (resolution_metres, resolution_metres),
+    )
+
+
+def project_required_surface(
+    semantic_surface: np.ndarray,
+    source_crs: rasterio.crs.CRS,
+    source_transform: rasterio.Affine,
+    destination_transform: rasterio.Affine,
+    width: int,
+    height: int,
+) -> np.ndarray:
+    destination = np.zeros(
+        (height, width),
+        dtype=np.uint8,
+    )
+
+    reproject(
+        source=semantic_surface.astype(np.uint8),
+        destination=destination,
+        src_transform=source_transform,
+        src_crs=source_crs,
+        src_nodata=0,
+        dst_transform=destination_transform,
+        dst_crs=source_crs,
+        dst_nodata=0,
+        resampling=Resampling.nearest,
+    )
+
+    return destination != 0
+
 def read_aligned_observation(
     observation: Observation,
     destination_crs: rasterio.crs.CRS,
@@ -291,11 +367,15 @@ def read_aligned_observation(
                 out_dtype="uint8",
             )
 
-            masks = vrt.read_masks(
-                indexes=(1, 2, 3),
+            valid = np.ones(
+                (height, width),
+                dtype=bool,
             )
 
-    valid = np.all(masks > 0, axis=0)
+            for band_index in (1, 2, 3):
+                valid &= (
+                    vrt.read_masks(band_index) > 0
+                )
 
     return values, valid
 
@@ -306,7 +386,6 @@ def compose_imagery(
     destination_transform: rasterio.Affine,
     width: int,
     height: int,
-    semantic_surface: np.ndarray,
 ) -> tuple[
     np.ndarray,
     np.ndarray,
@@ -348,11 +427,10 @@ def compose_imagery(
             height=height,
         )
 
-        useful = valid & semantic_surface
-        write_mask = useful & ~coverage
+        write_mask = valid & ~coverage
 
-        useful_pixels = int(
-            np.count_nonzero(useful)
+        valid_pixels = int(
+            np.count_nonzero(valid)
         )
         contributed_pixels = int(
             np.count_nonzero(write_mask)
@@ -373,102 +451,207 @@ def compose_imagery(
                 ),
                 "role": observation.role,
                 "source": observation.href,
-                "validSemanticPixels": useful_pixels,
+                "validPixels": valid_pixels,
                 "contributedPixels": contributed_pixels,
             }
         )
 
-        print("  valid semantic pixels:", useful_pixels)
+        print("  valid pixels:", valid_pixels)
         print("  contributed pixels:", contributed_pixels)
 
     return imagery, coverage, contribution_records
 
 
-def repair_isolated_pixels(
+def repair_enclosed_gaps(
     imagery: np.ndarray,
     coverage: np.ndarray,
-    semantic_surface: np.ndarray,
+    required_surface: np.ndarray,
 ) -> list[dict[str, int]]:
-    missing = semantic_surface & ~coverage
+    missing = required_surface & ~coverage
 
     rows, cols = np.where(missing)
 
     if len(rows) == 0:
         return []
 
-    if len(rows) > MAX_ISOLATED_PIXEL_REPAIRS:
+    if len(rows) > MAX_ENCLOSED_GAP_TOTAL_PIXELS:
         raise RuntimeError(
-            "Imagery coverage contains too many missing semantic "
-            f"pixels for isolated repair: {len(rows)} missing, "
-            f"limit {MAX_ISOLATED_PIXEL_REPAIRS}."
+            "Imagery coverage contains too many missing required "
+            f"surface pixels for bounded enclosed-gap repair: "
+            f"{len(rows)} missing, limit "
+            f"{MAX_ENCLOSED_GAP_TOTAL_PIXELS}."
         )
+
+    missing_pixels = set(
+        zip(
+            rows.tolist(),
+            cols.tolist(),
+        )
+    )
+
+    visited: set[tuple[int, int]] = set()
+    components: list[list[tuple[int, int]]] = []
+
+    neighbor_offsets = (
+        (-1, -1),
+        (-1, 0),
+        (-1, 1),
+        (0, -1),
+        (0, 1),
+        (1, -1),
+        (1, 0),
+        (1, 1),
+    )
+
+    for start in sorted(missing_pixels):
+        if start in visited:
+            continue
+
+        stack = [start]
+        visited.add(start)
+        component: list[tuple[int, int]] = []
+
+        while stack:
+            row, col = stack.pop()
+            component.append((row, col))
+
+            for row_offset, col_offset in neighbor_offsets:
+                candidate = (
+                    row + row_offset,
+                    col + col_offset,
+                )
+
+                if (
+                    candidate in missing_pixels
+                    and candidate not in visited
+                ):
+                    visited.add(candidate)
+                    stack.append(candidate)
+
+        components.append(component)
+
+    for component in components:
+        if (
+            len(component)
+            > MAX_ENCLOSED_GAP_COMPONENT_PIXELS
+        ):
+            raise RuntimeError(
+                "Missing imagery component exceeds the bounded "
+                "enclosed-gap repair limit: "
+                f"{len(component)} pixels, limit "
+                f"{MAX_ENCLOSED_GAP_COMPONENT_PIXELS}."
+            )
+
+        component_pixels = set(component)
+        boundary_pixels: set[tuple[int, int]] = set()
+
+        for row, col in component:
+            for row_offset, col_offset in neighbor_offsets:
+                neighbor_row = row + row_offset
+                neighbor_col = col + col_offset
+
+                if (
+                    neighbor_row < 0
+                    or neighbor_col < 0
+                    or neighbor_row >= coverage.shape[0]
+                    or neighbor_col >= coverage.shape[1]
+                ):
+                    raise RuntimeError(
+                        "Missing imagery component touches the "
+                        "visual-grid edge."
+                    )
+
+                candidate = (
+                    neighbor_row,
+                    neighbor_col,
+                )
+
+                if candidate not in component_pixels:
+                    boundary_pixels.add(candidate)
+
+        if any(
+            not coverage[row, col]
+            for row, col in boundary_pixels
+        ):
+            raise RuntimeError(
+                "Missing imagery component is not fully enclosed "
+                "by covered imagery."
+            )
 
     repairs: list[dict[str, int]] = []
 
-    for row, col in zip(rows, cols):
-        r0 = row - 1
-        r1 = row + 2
-        c0 = col - 1
-        c1 = col + 2
+    for component in components:
+        remaining = set(component)
 
-        if (
-            r0 < 0
-            or c0 < 0
-            or r1 > coverage.shape[0]
-            or c1 > coverage.shape[1]
-        ):
-            raise RuntimeError(
-                "Missing imagery pixel touches the working-grid "
-                f"edge at row {row}, col {col}."
-            )
+        while remaining:
+            wave: list[
+                tuple[
+                    int,
+                    int,
+                    np.ndarray,
+                ]
+            ] = []
 
-        neighborhood_coverage = coverage[
-            r0:r1,
-            c0:c1,
-        ].copy()
+            for row, col in sorted(remaining):
+                neighbors = []
 
-        neighborhood_coverage[1, 1] = True
+                for row_offset, col_offset in neighbor_offsets:
+                    neighbor_row = row + row_offset
+                    neighbor_col = col + col_offset
 
-        if not np.all(neighborhood_coverage):
-            raise RuntimeError(
-                "Missing imagery is not an isolated single-pixel "
-                f"hole at row {row}, col {col}."
-            )
-
-        neighbors = []
-
-        for neighbor_row in range(r0, r1):
-            for neighbor_col in range(c0, c1):
-                if (
-                    neighbor_row == row
-                    and neighbor_col == col
-                ):
-                    continue
-
-                neighbors.append(
-                    imagery[
-                        :,
+                    if coverage[
                         neighbor_row,
                         neighbor_col,
-                    ].astype(np.float64)
+                    ]:
+                        neighbors.append(
+                            imagery[
+                                :,
+                                neighbor_row,
+                                neighbor_col,
+                            ].astype(np.float64)
+                        )
+
+                if not neighbors:
+                    continue
+
+                replacement = np.rint(
+                    np.mean(
+                        np.stack(
+                            neighbors,
+                            axis=0,
+                        ),
+                        axis=0,
+                    )
+                ).clip(
+                    0,
+                    255,
+                ).astype(np.uint8)
+
+                wave.append(
+                    (
+                        row,
+                        col,
+                        replacement,
+                    )
                 )
 
-        replacement = np.rint(
-            np.mean(
-                np.stack(neighbors, axis=0),
-                axis=0,
-            )
-        ).clip(0, 255).astype(np.uint8)
+            if not wave:
+                raise RuntimeError(
+                    "Enclosed imagery gap could not be repaired "
+                    "from its covered boundary."
+                )
 
-        imagery[:, row, col] = replacement
-        coverage[row, col] = True
+            for row, col, replacement in wave:
+                imagery[:, row, col] = replacement
+                coverage[row, col] = True
+                remaining.remove((row, col))
 
-        repairs.append(
-            {
-                "row": int(row),
-                "col": int(col),
-            }
-        )
+                repairs.append(
+                    {
+                        "row": int(row),
+                        "col": int(col),
+                    }
+                )
 
     return repairs
 
@@ -476,7 +659,7 @@ def repair_isolated_pixels(
 def write_rgb_raster(
     path: Path,
     imagery: np.ndarray,
-    semantic_surface: np.ndarray,
+    coverage: np.ndarray,
     crs: rasterio.crs.CRS,
     transform: rasterio.Affine,
 ) -> None:
@@ -496,7 +679,7 @@ def write_rgb_raster(
     }
 
     output = imagery.copy()
-    output[:, ~semantic_surface] = 0
+    output[:, ~coverage] = 0
 
     with rasterio.Env(GDAL_TIFF_INTERNAL_MASK=True):
         with rasterio.open(
@@ -506,7 +689,7 @@ def write_rgb_raster(
         ) as destination:
             destination.write(output)
             destination.write_mask(
-                semantic_surface.astype(np.uint8) * 255
+                coverage.astype(np.uint8) * 255
             )
 
 
@@ -518,16 +701,32 @@ def main() -> None:
 
     (
         target_crs,
-        target_transform,
-        width,
-        height,
+        semantic_transform,
+        semantic_width,
+        semantic_height,
         bounds,
-        resolution,
+        semantic_resolution,
         semantic_surface,
     ) = read_reference(reference)
 
-    semantic_pixels = int(
-        np.count_nonzero(semantic_surface)
+    (
+        target_transform,
+        width,
+        height,
+        resolution,
+    ) = create_visual_grid(bounds)
+
+    required_surface = project_required_surface(
+        semantic_surface=semantic_surface,
+        source_crs=target_crs,
+        source_transform=semantic_transform,
+        destination_transform=target_transform,
+        width=width,
+        height=height,
+    )
+
+    required_surface_pixels = int(
+        np.count_nonzero(required_surface)
     )
 
     print("=== EST IMAGERY PREPARATION ===")
@@ -535,10 +734,18 @@ def main() -> None:
     print("source type: Sentinel-2 Level-2A TCI")
     print("observations:", len(OBSERVATIONS))
     print("target CRS:", target_crs)
-    print("target dimensions:", f"{width} x {height}")
-    print("target resolution:", resolution)
+    print(
+        "semantic grid:",
+        f"{semantic_width} x {semantic_height}",
+        semantic_resolution,
+    )
+    print("visual dimensions:", f"{width} x {height}")
+    print("visual resolution:", resolution)
     print("target bounds:", bounds)
-    print("semantic pixels:", semantic_pixels)
+    print(
+        "required visual-grid surface pixels:",
+        required_surface_pixels,
+    )
 
     imagery, coverage, contributions = compose_imagery(
         observations=OBSERVATIONS,
@@ -546,52 +753,51 @@ def main() -> None:
         destination_transform=target_transform,
         width=width,
         height=height,
-        semantic_surface=semantic_surface,
     )
 
     covered_before_repair = int(
         np.count_nonzero(
-            coverage & semantic_surface
+            coverage & required_surface
         )
     )
 
     missing_before_repair = (
-        semantic_pixels - covered_before_repair
+        required_surface_pixels - covered_before_repair
     )
 
     print("\n=== COVERAGE BEFORE REPAIR ===")
     print(
-        "covered semantic pixels:",
+        "covered required surface pixels:",
         covered_before_repair,
     )
     print(
-        "missing semantic pixels:",
+        "missing required surface pixels:",
         missing_before_repair,
     )
     print(
         "coverage percent:",
         round(
             covered_before_repair
-            / semantic_pixels
+            / required_surface_pixels
             * 100.0,
             6,
         ),
     )
 
-    repairs = repair_isolated_pixels(
+    repairs = repair_enclosed_gaps(
         imagery=imagery,
         coverage=coverage,
-        semantic_surface=semantic_surface,
+        required_surface=required_surface,
     )
 
     covered_after_repair = int(
         np.count_nonzero(
-            coverage & semantic_surface
+            coverage & required_surface
         )
     )
 
     missing_after_repair = (
-        semantic_pixels - covered_after_repair
+        required_surface_pixels - covered_after_repair
     )
 
     print("\n=== CONTROLLED REPAIR ===")
@@ -606,18 +812,18 @@ def main() -> None:
 
     print("\n=== FINAL COVERAGE ===")
     print(
-        "covered semantic pixels:",
+        "covered required surface pixels:",
         covered_after_repair,
     )
     print(
-        "missing semantic pixels:",
+        "missing required surface pixels:",
         missing_after_repair,
     )
 
     if missing_after_repair:
         raise RuntimeError(
             "Imagery preparation did not completely cover "
-            "the Est semantic surface after controlled repair."
+            "the required Est surface after controlled repair."
         )
 
     output_directory.mkdir(
@@ -633,18 +839,26 @@ def main() -> None:
     write_rgb_raster(
         path=imagery_path,
         imagery=imagery,
-        semantic_surface=semantic_surface,
+        coverage=coverage,
         crs=target_crs,
         transform=target_transform,
     )
 
     manifest = {
         "purpose": "Est continuous visual presentation input",
-        "referenceGrid": str(
+        "semanticReference": str(
             reference.relative_to(ROOT)
         ),
         "sourceType": "Sentinel-2 Level-2A true-color imagery",
         "observations": contributions,
+        "semanticGrid": {
+            "width": semantic_width,
+            "height": semantic_height,
+            "resolutionMetres": {
+                "x": semantic_resolution[0],
+                "y": semantic_resolution[1],
+            },
+        },
         "grid": {
             "crs": target_crs.to_wkt(),
             "width": width,
@@ -667,36 +881,51 @@ def main() -> None:
         },
         "processing": {
             "sourceResampling": "bilinear",
+            "semanticFootprintResampling": "nearest",
             "composition": (
                 "ordered first-valid observations; "
                 "2026-07-13 primary imagery wins and selected "
                 "2026-07-30 observations fill uncovered pixels"
             ),
             "coverageBeforeRepair": {
-                "coveredSemanticPixels": (
+                "requiredSurfacePixels": (
+                    required_surface_pixels
+                ),
+                "coveredRequiredSurfacePixels": (
                     covered_before_repair
                 ),
-                "missingSemanticPixels": (
+                "missingRequiredSurfacePixels": (
                     missing_before_repair
                 ),
             },
-            "isolatedPixelRepair": {
-                "maximumAllowed": (
-                    MAX_ISOLATED_PIXEL_REPAIRS
+            "enclosedGapRepair": {
+                "maximumComponentPixels": (
+                    MAX_ENCLOSED_GAP_COMPONENT_PIXELS
+                ),
+                "maximumTotalPixels": (
+                    MAX_ENCLOSED_GAP_TOTAL_PIXELS
                 ),
                 "count": len(repairs),
                 "pixels": repairs,
                 "method": (
-                    "mean RGB of the eight fully covered "
-                    "neighboring pixels, rounded to uint8"
+                    "bounded fully enclosed coverage gaps are "
+                    "filled inward in synchronous layers using "
+                    "the mean RGB of currently covered "
+                    "eight-neighbor pixels"
                 ),
             },
             "coverageAfterRepair": {
-                "coveredSemanticPixels": (
+                "requiredSurfacePixels": (
+                    required_surface_pixels
+                ),
+                "coveredRequiredSurfacePixels": (
                     covered_after_repair
                 ),
-                "missingSemanticPixels": (
+                "missingRequiredSurfacePixels": (
                     missing_after_repair
+                ),
+                "coveredVisualGridPixels": int(
+                    np.count_nonzero(coverage)
                 ),
             },
         },
@@ -717,14 +946,14 @@ def main() -> None:
 
     surface_values = imagery[
         :,
-        semantic_surface,
+        required_surface,
     ]
 
     print("\n=== OUTPUT ===")
     print("visual RGB:", imagery_path)
     print("manifest:", manifest_path)
 
-    print("\n=== RGB STATS ON SEMANTIC SURFACE ===")
+    print("\n=== RGB STATS ON REQUIRED SURFACE ===")
 
     for band_index, band_name in enumerate(
         ("red", "green", "blue")

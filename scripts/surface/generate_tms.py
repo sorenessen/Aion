@@ -14,7 +14,11 @@ import numpy as np
 import rasterio
 from rasterio.coords import BoundingBox
 from rasterio.enums import Resampling
-from rasterio.warp import calculate_default_transform, reproject
+from rasterio.warp import (
+    calculate_default_transform,
+    reproject,
+    transform_bounds,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -97,6 +101,113 @@ def geographic_source_geometry(
     resolution = max(abs(transform.a), abs(transform.e))
 
     return bounds, resolution
+
+
+def select_pyramid_geometry(
+    semantic_source: rasterio.io.DatasetReader,
+    visual_rgb_source: rasterio.io.DatasetReader | None = None,
+) -> tuple[
+    BoundingBox,
+    float,
+    float | None,
+    float,
+    str,
+]:
+    semantic_bounds, semantic_resolution = (
+        geographic_source_geometry(semantic_source)
+    )
+
+    visual_resolution = None
+    detail_resolution = semantic_resolution
+    detail_resolution_source = "semanticSource"
+
+    if visual_rgb_source is not None:
+        _, visual_resolution = geographic_source_geometry(
+            visual_rgb_source
+        )
+        detail_resolution = visual_resolution
+        detail_resolution_source = "visualRgb"
+
+    return (
+        semantic_bounds,
+        semantic_resolution,
+        visual_resolution,
+        detail_resolution,
+        detail_resolution_source,
+    )
+
+
+def validate_visual_rgb_coverage(
+    semantic_source: rasterio.io.DatasetReader,
+    visual_rgb_source: rasterio.io.DatasetReader,
+) -> None:
+    semantic_bounds_in_visual_crs = transform_bounds(
+        semantic_source.crs,
+        visual_rgb_source.crs,
+        *semantic_source.bounds,
+        densify_pts=21,
+    )
+
+    visual_bounds = visual_rgb_source.bounds
+    tolerance = max(
+        abs(visual_rgb_source.transform.a),
+        abs(visual_rgb_source.transform.e),
+    ) * 1e-6
+
+    if (
+        visual_bounds.left
+        > semantic_bounds_in_visual_crs[0] + tolerance
+        or visual_bounds.bottom
+        > semantic_bounds_in_visual_crs[1] + tolerance
+        or visual_bounds.right
+        < semantic_bounds_in_visual_crs[2] - tolerance
+        or visual_bounds.top
+        < semantic_bounds_in_visual_crs[3] - tolerance
+    ):
+        raise RuntimeError(
+            "Visual RGB presentation input does not cover "
+            "the Est semantic source bounds."
+        )
+
+    semantic_on_visual_grid = np.zeros(
+        (
+            visual_rgb_source.height,
+            visual_rgb_source.width,
+        ),
+        dtype=np.uint8,
+    )
+
+    reproject(
+        source=rasterio.band(semantic_source, 1),
+        destination=semantic_on_visual_grid,
+        src_transform=semantic_source.transform,
+        src_crs=semantic_source.crs,
+        src_nodata=semantic_source.nodata,
+        dst_transform=visual_rgb_source.transform,
+        dst_crs=visual_rgb_source.crs,
+        dst_nodata=0,
+        resampling=Resampling.nearest,
+    )
+
+    visual_mask = visual_rgb_source.dataset_mask()
+
+    if visual_mask.shape != semantic_on_visual_grid.shape:
+        raise RuntimeError(
+            "Visual RGB coverage mask shape does not match "
+            "the Visual RGB raster."
+        )
+
+    missing_visual = (
+        (semantic_on_visual_grid != 0)
+        & (visual_mask == 0)
+    )
+
+    if np.any(missing_visual):
+        raise RuntimeError(
+            "Visual RGB presentation input does not cover "
+            "all semantic surface pixels: "
+            f"{int(np.count_nonzero(missing_visual))} missing"
+        )
 
 
 def validate_aligned_presentation_input(
@@ -229,36 +340,6 @@ def render_tile(
                 dst_crs="EPSG:4326",
                 dst_nodata=0,
                 resampling=Resampling.bilinear,
-            )
-
-        source_mask = visual_rgb_source.dataset_mask()
-
-        visual_mask = np.zeros(
-            (TILE_SIZE, TILE_SIZE),
-            dtype=np.uint8,
-        )
-
-        reproject(
-            source=source_mask,
-            destination=visual_mask,
-            src_transform=visual_rgb_source.transform,
-            src_crs=visual_rgb_source.crs,
-            src_nodata=0,
-            dst_transform=tile_transform(tile),
-            dst_crs="EPSG:4326",
-            dst_nodata=0,
-            resampling=Resampling.nearest,
-        )
-
-        semantic_surface = destination != 0
-        valid_visual = visual_mask > 0
-        missing_visual = semantic_surface & ~valid_visual
-
-        if np.any(missing_visual):
-            raise RuntimeError(
-                "Visual RGB presentation input does not cover "
-                f"all semantic pixels in tile {tile}: "
-                f"{int(np.count_nonzero(missing_visual))} missing"
             )
 
         visual_rgb = np.moveaxis(
@@ -518,19 +599,25 @@ def generate_pyramid_contents(
                     "uint8 channels."
                 )
 
-            validate_aligned_presentation_input(
+            validate_visual_rgb_coverage(
                 source,
                 visual_rgb_source,
-                "Visual RGB",
             )
 
-        bounds, source_resolution = (
-            geographic_source_geometry(source)
+        (
+            bounds,
+            source_resolution,
+            visual_rgb_resolution,
+            detail_resolution,
+            detail_resolution_source,
+        ) = select_pyramid_geometry(
+            source,
+            visual_rgb_source,
         )
 
         minimum_level = choose_minimum_level(bounds)
         maximum_level = choose_maximum_level(
-            source_resolution
+            detail_resolution
         )
 
         if maximum_level < minimum_level:
@@ -652,6 +739,15 @@ def generate_pyramid_contents(
         "sourceGeographicDegreesPerPixel": (
             source_resolution
         ),
+        "visualRgbGeographicDegreesPerPixel": (
+            visual_rgb_resolution
+        ),
+        "detailGeographicDegreesPerPixel": (
+            detail_resolution
+        ),
+        "detailResolutionSource": (
+            detail_resolution_source
+        ),
         "minimumLevel": minimum_level,
         "maximumLevel": maximum_level,
         "totalTileCount": total_tiles,
@@ -672,6 +768,15 @@ def generate_pyramid_contents(
             (
                 "Visual RGB is an optional presentation input and "
                 "does not define semantic surface identity."
+            ),
+            (
+                "Semantic source bounds define the published "
+                "regional extent."
+            ),
+            (
+                "When Visual RGB is present, its effective "
+                "geographic resolution determines the maximum "
+                "TMS detail level."
             ),
             (
                 "TMS Y coordinates increase from south "
@@ -799,8 +904,9 @@ def main() -> None:
         type=Path,
         default=None,
         help=(
-            "Optional aligned three-band uint8 RGB raster used "
-            "as the continuous visual basis."
+            "Optional three-band uint8 RGB raster used as the "
+            "continuous visual basis. Its grid may differ from the "
+            "semantic source grid."
         ),
     )
 

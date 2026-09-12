@@ -321,3 +321,129 @@ This checkpoint establishes the intended ownership direction without adding a
 tile server, backend service, regional simulation state, or renderer-owned
 surface semantics. The categorical and material-based modes remain valuable
 evaluation controls and fallback capabilities.
+
+## Visual-resolution decoupling checkpoint
+
+On September 11-12, 2026, the continuous visual-surface pipeline was
+decoupled from the semantic raster's approximately 30-meter working
+resolution. Sentinel-2 RGB is now composed on a separate 10-meter visual grid
+covering the same projected regional bounds, while Est surface semantics
+remain on their existing 30-meter grid.
+
+The 10-meter visual grid is 17,115 by 12,690 pixels. Semantic coverage is
+projected onto it with nearest-neighbor sampling so categorical identity is
+not blurred or reinterpreted. Continuous RGB imagery is sampled bilinearly.
+This establishes that semantic/reference resolution and presentation
+resolution are independent concerns and need not share one raster grid.
+
+The imagery-preparation pipeline also gained a bounded repair for small,
+fully enclosed presentation-coverage gaps. The evaluation region initially
+contained 349 missing required visual pixels across 131 enclosed components;
+the largest component contained 24 pixels. The repair accepts components no
+larger than 32 pixels, limits total repair to 512 pixels, rejects components
+that touch the visual-grid edge, requires a covered external boundary, and
+fills inward deterministically from covered neighboring RGB values. All 349
+required pixels were repaired. Uncovered pixels outside the required semantic
+surface remain uncovered.
+
+TMS generation was independently decoupled from semantic resolution. Semantic
+source bounds continue to define the publication extent, but when a visual RGB
+source is present its effective geographic resolution determines the maximum
+detail level. The approximately 30-meter semantic source resolves through
+level 11; the 10-meter visual source resolves through level 13.
+
+Visual coverage is validated once as a pyramid preflight invariant rather than
+by repeatedly reading and reprojecting the full visual dataset mask for every
+tile. This matters at the 10-meter working size of more than 217 million
+pixels and keeps per-tile rendering focused on RGB reprojection.
+
+The resulting local experimental pyramid contains 11,188 PNG tiles across
+levels 7 through 13 and occupies approximately 435 MB. Its tile counts and
+manifest were independently verified. The 10-meter aligned RGB artifact is
+approximately 517 MB. These are evaluation artifacts, not a decision to store
+large high-resolution pyramids in normal Git history. The existing smaller
+level-11 continuous-surface artifact remains the committed evaluation
+checkpoint.
+
+The full Python suite contains 41 passing tests at this checkpoint, and
+`git diff --check` passes.
+
+Architecturally, this experiment succeeded. Est can preserve semantic truth on
+one grid, presentation information on another, derive rendering detail from
+the appropriate source, validate cross-grid coverage, and continue to keep
+Cesium outside semantic interpretation.
+
+## Close-range raster conclusion
+
+Browser A/B evaluation of the 10-meter result established a different limit:
+preserving all available Sentinel-2 detail does not make that imagery suitable
+as Est's close-range urban representation.
+
+At regional scale the continuous visual surface remains substantially more
+natural than direct categorical land-cover rendering. At close urban scale,
+however, individual buildings and site features become broad or blurry color
+shapes. The Washington State Capitol area provided the clearest comparison:
+the baseline can resolve recognizable buildings, roads, parking areas, paths,
+trees, roof structure, and surrounding site organization that the 10-meter
+Sentinel surface cannot.
+
+This is no longer a semantic-grid or TMS-level problem. It is an information
+limit in the visual source at the requested viewing scale.
+
+Do not continue this line of investigation by generating level 14 or 15 tiles
+from the same imagery, sharpening or interpolating the source, adding more
+generic procedural noise, tinting imagery from semantic categories, tuning
+scalar slope darkening, smoothing semantic boundaries, or acquiring additional
+Sentinel dates in an attempt to manufacture street-level detail.
+
+The work remains useful. Continuous imagery is a viable regional presentation
+layer, and the independent-resolution composition architecture should be
+preserved. The failed hypothesis is narrower: one raster surface should not be
+expected to provide Est's useful representation at every camera distance.
+
+## Multi-scale presentation pivot
+
+The next presentation investigation will evaluate different representations
+at different spatial and camera scales while preserving one authoritative Est
+world state.
+
+The provisional model is:
+
+- planetary scale: terrain, atmosphere, and coarse/global surface appearance
+- regional scale: terrain, imagery/materials, land-cover-informed appearance,
+  and broad vegetation or water treatment
+- local/city scale: buildings, roads, bridges, vegetation, water features,
+  and other justified geometry
+- street/immediate scale: higher-detail geometry, materials, and local
+  presentation detail where evidence and product requirements justify them
+
+These are evaluation categories, not committed LOD boundaries or a final
+rendering architecture. The renderer may change how a feature is represented
+as the camera approaches it, but representation must not redefine simulation
+truth.
+
+The guiding ownership rule remains:
+
+> Simulation determines what exists and what state it is in. Presentation
+> determines how that state should be represented at the current scale.
+
+The next experiment is intentionally narrow: the Washington State Capitol
+campus in Olympia. Keep World Terrain and baseline imagery, acquire real
+building footprints for a small surrounding area, convert them through an
+Est-owned renderer-neutral preparation boundary, and let the Cesium adapter
+render the resulting building geometry.
+
+The first question is not whether Est can build a complete city system. It is
+whether a recognizable real building can transition from being primarily part
+of regional imagery at altitude to readable geometry during close descent
+without an unacceptable visual discontinuity.
+
+Do not begin the spike with roads, vegetation, props, facade generation, or a
+general planetary geometry system. Those become justified follow-ups only if
+the building experiment proves the central multi-scale hypothesis.
+
+The regional surface work is therefore not abandoned. It has established the
+presentation/data boundaries needed for a larger system and remains useful at
+the scales where its source information is appropriate. The next evaluation
+moves to local geometry because the browser evidence shows that additional
+raster refinement is now solving the wrong problem.

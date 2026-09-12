@@ -382,6 +382,24 @@ These are intentionally not rejected. They are simply not allowed to distort Fir
 - [x] Evaluate whether semantic-boundary treatment is the next visual surface direction; source-class comparison showed that direct categorical rendering remains the limiting model even when richer NLCD structure is preserved.
 - [x] Define and prove a visual-surface input/composition seam separate from authoritative Est surface semantics; terrain-derived slope now influences presentation without changing semantic identity, coverage, or renderer ownership.
 - [x] Define the next visual-surface composition model so categorical land-cover geometry can inform appearance without being directly exposed as the rendered surface. Continuous Sentinel-2 RGB now provides the visual basis while Est semantics independently define surface identity and coverage.
-- [ ] Decouple visual-surface resolution from semantic-grid resolution so approximately 10-meter imagery detail is preserved instead of being downsampled onto the approximately 30-meter semantic grid before composition.
-- [ ] Derive visual TMS detail level from the effective visual-source resolution rather than the semantic raster resolution.
+- [x] Decouple visual-surface resolution from semantic-grid resolution so approximately 10-meter imagery detail is preserved instead of being downsampled onto the approximately 30-meter semantic grid before composition.
+- [x] Derive visual TMS detail level from the effective visual-source resolution rather than the semantic raster resolution.
+- [x] Evaluate the resulting 10-meter Sentinel-2 surface through a level-13 regional TMS and confirm that the pipeline preserves additional source detail but remains insufficient for close-range urban representation.
+- [x] Conclude the raster-resolution escalation experiment: do not pursue additional Sentinel zoom levels, sharpening, interpolation, semantic tinting, or slope tuning as substitutes for local geometric detail.
 - [ ] Harden and test TMS publication rollback behavior.
+
+## Multi-scale presentation evaluation
+
+The regional surface experiments established that no single representation
+should be expected to serve planetary, regional, city, and street scales.
+Preserve authoritative Est world state independently of presentation while
+evaluating progressively richer visual representations as camera distance
+decreases.
+
+- [ ] Prove the local-geometry hypothesis with a deliberately small Washington State Capitol campus vertical slice.
+- [ ] Acquire real building footprints for the Capitol evaluation area without committing large or disposable source extracts by default.
+- [ ] Define a renderer-neutral Est local-scene artifact for the building spike rather than exposing OSM semantics directly to Cesium.
+- [ ] Render recognizable building geometry over terrain and imagery without moving semantic or simulation ownership into Cesium.
+- [ ] Evaluate the visual transition from regional imagery at altitude to local building geometry during descent.
+- [ ] Decide from the building spike whether roads, vegetation, water features, and other local geometry should be evaluated next.
+- [ ] Define scale/LOD boundaries only after the local-scene experiment provides evidence for the required transition behavior.
