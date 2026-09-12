@@ -18,7 +18,6 @@ from rasterio.errors import NotGeoreferencedWarning
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from surface.presentation import load_surface_presentation_model  # noqa: E402
 from surface.tms import TILE_SIZE, Tile, tile_bounds  # noqa: E402
 
 
@@ -255,24 +254,31 @@ def validate_pyramid(
             "Manifest yOrigin must be south."
         )
 
-    presentation = load_surface_presentation_model()
+    presentation_version = manifest.get(
+        "surfacePresentationVersion"
+    )
 
     if (
-        manifest.get("surfacePresentationVersion")
-        != presentation.version
+        not isinstance(presentation_version, int)
+        or isinstance(presentation_version, bool)
+        or presentation_version <= 0
     ):
         raise ValueError(
-            "Manifest surfacePresentationVersion does not "
-            "match the current Est presentation definition."
+            "Manifest surfacePresentationVersion must be "
+            "a positive integer."
         )
 
+    presentation_name = manifest.get(
+        "surfacePresentationName"
+    )
+
     if (
-        manifest.get("surfacePresentationName")
-        != presentation.name
+        not isinstance(presentation_name, str)
+        or not presentation_name.strip()
     ):
         raise ValueError(
-            "Manifest surfacePresentationName does not "
-            "match the current Est presentation definition."
+            "Manifest surfacePresentationName must be "
+            "a non-empty string."
         )
 
     minimum_level = int(manifest["minimumLevel"])

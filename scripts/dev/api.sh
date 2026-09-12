@@ -5,6 +5,17 @@ set -u
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
+DOTNET_BIN="$(command -v dotnet 2>/dev/null || true)"
+
+if [[ -z "$DOTNET_BIN" && -x /usr/local/share/dotnet/dotnet ]]; then
+    DOTNET_BIN=/usr/local/share/dotnet/dotnet
+fi
+
+if [[ -z "$DOTNET_BIN" ]]; then
+    echo "Est.Api requires the .NET SDK, but dotnet could not be found."
+    exit 1
+fi
+
 PORT=5026
 HEALTH_URL="http://127.0.0.1:${PORT}/health"
 
@@ -80,7 +91,7 @@ if [[ -n "$pid" ]]; then
     exit 1
 fi
 
-launch_command="cd ${(q)EST_ROOT} && dotnet run --project src/Est.Api/Est.Api.csproj --launch-profile http"
+launch_command="cd ${(q)EST_ROOT} && ${(q)DOTNET_BIN} run --project src/Est.Api/Est.Api.csproj --launch-profile http"
 
 echo "Starting Est.Api in its own iTerm window..."
 open_iterm_window "$launch_command"

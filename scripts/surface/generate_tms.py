@@ -6,6 +6,7 @@ import argparse
 import json
 import shutil
 import sys
+from contextlib import ExitStack
 from pathlib import Path
 from xml.etree.ElementTree import Element, SubElement, ElementTree
 
@@ -13,7 +14,11 @@ import numpy as np
 import rasterio
 from rasterio.coords import BoundingBox
 from rasterio.enums import Resampling
-from rasterio.warp import calculate_default_transform, reproject
+from rasterio.warp import (
+    calculate_default_transform,
+    reproject,
+    transform_bounds,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -98,11 +103,146 @@ def geographic_source_geometry(
     return bounds, resolution
 
 
+def select_pyramid_geometry(
+    semantic_source: rasterio.io.DatasetReader,
+    visual_rgb_source: rasterio.io.DatasetReader | None = None,
+) -> tuple[
+    BoundingBox,
+    float,
+    float | None,
+    float,
+    str,
+]:
+    semantic_bounds, semantic_resolution = (
+        geographic_source_geometry(semantic_source)
+    )
+
+    visual_resolution = None
+    detail_resolution = semantic_resolution
+    detail_resolution_source = "semanticSource"
+
+    if visual_rgb_source is not None:
+        _, visual_resolution = geographic_source_geometry(
+            visual_rgb_source
+        )
+        detail_resolution = visual_resolution
+        detail_resolution_source = "visualRgb"
+
+    return (
+        semantic_bounds,
+        semantic_resolution,
+        visual_resolution,
+        detail_resolution,
+        detail_resolution_source,
+    )
+
+
+def validate_visual_rgb_coverage(
+    semantic_source: rasterio.io.DatasetReader,
+    visual_rgb_source: rasterio.io.DatasetReader,
+) -> None:
+    semantic_bounds_in_visual_crs = transform_bounds(
+        semantic_source.crs,
+        visual_rgb_source.crs,
+        *semantic_source.bounds,
+        densify_pts=21,
+    )
+
+    visual_bounds = visual_rgb_source.bounds
+    tolerance = max(
+        abs(visual_rgb_source.transform.a),
+        abs(visual_rgb_source.transform.e),
+    ) * 1e-6
+
+    if (
+        visual_bounds.left
+        > semantic_bounds_in_visual_crs[0] + tolerance
+        or visual_bounds.bottom
+        > semantic_bounds_in_visual_crs[1] + tolerance
+        or visual_bounds.right
+        < semantic_bounds_in_visual_crs[2] - tolerance
+        or visual_bounds.top
+        < semantic_bounds_in_visual_crs[3] - tolerance
+    ):
+        raise RuntimeError(
+            "Visual RGB presentation input does not cover "
+            "the Est semantic source bounds."
+        )
+
+    semantic_on_visual_grid = np.zeros(
+        (
+            visual_rgb_source.height,
+            visual_rgb_source.width,
+        ),
+        dtype=np.uint8,
+    )
+
+    reproject(
+        source=rasterio.band(semantic_source, 1),
+        destination=semantic_on_visual_grid,
+        src_transform=semantic_source.transform,
+        src_crs=semantic_source.crs,
+        src_nodata=semantic_source.nodata,
+        dst_transform=visual_rgb_source.transform,
+        dst_crs=visual_rgb_source.crs,
+        dst_nodata=0,
+        resampling=Resampling.nearest,
+    )
+
+    visual_mask = visual_rgb_source.dataset_mask()
+
+    if visual_mask.shape != semantic_on_visual_grid.shape:
+        raise RuntimeError(
+            "Visual RGB coverage mask shape does not match "
+            "the Visual RGB raster."
+        )
+
+    missing_visual = (
+        (semantic_on_visual_grid != 0)
+        & (visual_mask == 0)
+    )
+
+    if np.any(missing_visual):
+        raise RuntimeError(
+            "Visual RGB presentation input does not cover "
+            "all semantic surface pixels: "
+            f"{int(np.count_nonzero(missing_visual))} missing"
+        )
+
+
+def validate_aligned_presentation_input(
+    source: rasterio.io.DatasetReader,
+    presentation_input: rasterio.io.DatasetReader,
+    label: str,
+) -> None:
+    checks = {
+        "CRS": presentation_input.crs == source.crs,
+        "transform": presentation_input.transform == source.transform,
+        "width": presentation_input.width == source.width,
+        "height": presentation_input.height == source.height,
+        "bounds": presentation_input.bounds == source.bounds,
+    }
+
+    failures = [
+        name
+        for name, passed in checks.items()
+        if not passed
+    ]
+
+    if failures:
+        raise RuntimeError(
+            f"{label} presentation input is not aligned with "
+            f"the Est semantic source grid: {failures}"
+        )
+
+
 def render_tile(
     source: rasterio.io.DatasetReader,
     tile: Tile,
     presentation: SurfacePresentation,
     valid_category_ids: set[int],
+    slope_source: rasterio.io.DatasetReader | None = None,
+    visual_rgb_source: rasterio.io.DatasetReader | None = None,
 ) -> tuple[np.ndarray, set[int]]:
     destination = np.zeros(
         (TILE_SIZE, TILE_SIZE),
@@ -134,6 +274,78 @@ def render_tile(
         raise RuntimeError(
             "Unexpected Est surface category IDs in tile "
             f"{tile}: {unexpected_ids}"
+        )
+
+    slope_degrees = None
+
+    if slope_source is not None:
+        slope_destination = np.full(
+            (TILE_SIZE, TILE_SIZE),
+            -999999.0,
+            dtype=np.float32,
+        )
+
+        reproject(
+            source=rasterio.band(slope_source, 1),
+            destination=slope_destination,
+            src_transform=slope_source.transform,
+            src_crs=slope_source.crs,
+            src_nodata=slope_source.nodata,
+            dst_transform=tile_transform(tile),
+            dst_crs="EPSG:4326",
+            dst_nodata=-999999.0,
+            resampling=Resampling.bilinear,
+        )
+
+        valid_slope = (
+            np.isfinite(slope_destination)
+            & (slope_destination != -999999.0)
+        )
+
+        semantic_surface = destination != 0
+
+        missing_slope = semantic_surface & ~valid_slope
+
+        if np.any(missing_slope):
+            raise RuntimeError(
+                "Slope presentation input does not cover "
+                f"all semantic pixels in tile {tile}: "
+                f"{int(np.count_nonzero(missing_slope))} missing"
+            )
+
+        slope_degrees = np.where(
+            valid_slope,
+            slope_destination,
+            0.0,
+        )
+
+    visual_rgb = None
+
+    if visual_rgb_source is not None:
+        visual_destination = np.zeros(
+            (3, TILE_SIZE, TILE_SIZE),
+            dtype=np.uint8,
+        )
+
+        for band_index in range(3):
+            reproject(
+                source=rasterio.band(
+                    visual_rgb_source,
+                    band_index + 1,
+                ),
+                destination=visual_destination[band_index],
+                src_transform=visual_rgb_source.transform,
+                src_crs=visual_rgb_source.crs,
+                dst_transform=tile_transform(tile),
+                dst_crs="EPSG:4326",
+                dst_nodata=0,
+                resampling=Resampling.bilinear,
+            )
+
+        visual_rgb = np.moveaxis(
+            visual_destination,
+            0,
+            -1,
         )
 
     transform = tile_transform(tile)
@@ -172,6 +384,8 @@ def render_tile(
         longitude,
         latitude,
         presentation,
+        slope_degrees=slope_degrees,
+        visual_rgb=visual_rgb,
     )
 
     return rgba, present_ids
@@ -215,6 +429,8 @@ def write_tilemapresource(
     bounds: BoundingBox,
     minimum_level: int,
     maximum_level: int,
+    *,
+    has_visual_rgb: bool = False,
 ) -> None:
     root = Element(
         "TileMap",
@@ -224,13 +440,21 @@ def write_tilemapresource(
         },
     )
 
-    SubElement(root, "Title").text = (
-        "Est NLCD 2025 Regional Surface Study"
-    )
-    SubElement(root, "Abstract").text = (
-        "Est-owned categorical surface rendering tiles "
-        "derived from USGS Annual NLCD 2025."
-    )
+    if has_visual_rgb:
+        title = "Est Regional Continuous Visual Surface Study"
+        abstract = (
+            "Est-composed continuous visual surface tiles using "
+            "presentation imagery within Est semantic surface coverage."
+        )
+    else:
+        title = "Est NLCD 2025 Regional Surface Study"
+        abstract = (
+            "Est-owned categorical surface rendering tiles "
+            "derived from USGS Annual NLCD 2025."
+        )
+
+    SubElement(root, "Title").text = title
+    SubElement(root, "Abstract").text = abstract
     SubElement(root, "SRS").text = "EPSG:4326"
 
     SubElement(
@@ -297,6 +521,8 @@ def write_tilemapresource(
 def generate_pyramid_contents(
     source_path: Path,
     output_directory: Path,
+    slope_path: Path | None = None,
+    visual_rgb_path: Path | None = None,
 ) -> dict:
     (
         definition_version,
@@ -312,19 +538,86 @@ def generate_pyramid_contents(
         exist_ok=True,
     )
 
-    with rasterio.open(source_path) as source:
+    with ExitStack() as stack:
+        source = stack.enter_context(
+            rasterio.open(source_path)
+        )
+
+        slope_source = None
+        visual_rgb_source = None
+
+        if slope_path is not None:
+            slope_source = stack.enter_context(
+                rasterio.open(slope_path)
+            )
+
+        if visual_rgb_path is not None:
+            visual_rgb_source = stack.enter_context(
+                rasterio.open(visual_rgb_path)
+            )
+
         if source.crs is None:
             raise SystemExit(
                 "Source category raster has no CRS."
             )
 
-        bounds, source_resolution = (
-            geographic_source_geometry(source)
+        if slope_source is not None:
+            if slope_source.crs is None:
+                raise RuntimeError(
+                    "Slope presentation input has no CRS."
+                )
+
+            if slope_source.count != 1:
+                raise RuntimeError(
+                    "Slope presentation input must have one band."
+                )
+
+            validate_aligned_presentation_input(
+                source,
+                slope_source,
+                "Slope",
+            )
+
+        if visual_rgb_source is not None:
+            if visual_rgb_source.crs is None:
+                raise RuntimeError(
+                    "Visual RGB presentation input has no CRS."
+                )
+
+            if visual_rgb_source.count != 3:
+                raise RuntimeError(
+                    "Visual RGB presentation input must have "
+                    "three bands."
+                )
+
+            if any(
+                dtype != "uint8"
+                for dtype in visual_rgb_source.dtypes
+            ):
+                raise RuntimeError(
+                    "Visual RGB presentation input must use "
+                    "uint8 channels."
+                )
+
+            validate_visual_rgb_coverage(
+                source,
+                visual_rgb_source,
+            )
+
+        (
+            bounds,
+            source_resolution,
+            visual_rgb_resolution,
+            detail_resolution,
+            detail_resolution_source,
+        ) = select_pyramid_geometry(
+            source,
+            visual_rgb_source,
         )
 
         minimum_level = choose_minimum_level(bounds)
         maximum_level = choose_maximum_level(
-            source_resolution
+            detail_resolution
         )
 
         if maximum_level < minimum_level:
@@ -352,6 +645,8 @@ def generate_pyramid_contents(
                     tile,
                     presentation,
                     valid_category_ids,
+                    slope_source=slope_source,
+                    visual_rgb_source=visual_rgb_source,
                 )
 
                 present_category_ids.update(
@@ -406,6 +701,7 @@ def generate_pyramid_contents(
         bounds,
         minimum_level,
         maximum_level,
+        has_visual_rgb=visual_rgb_path is not None,
     )
 
     manifest = {
@@ -417,6 +713,18 @@ def generate_pyramid_contents(
         ),
         "surfacePresentationName": presentation.name,
         "source": str(source_path),
+        "presentationInputs": {
+            "slopeDegrees": (
+                str(slope_path)
+                if slope_path is not None
+                else None
+            ),
+            "visualRgb": (
+                str(visual_rgb_path)
+                if visual_rgb_path is not None
+                else None
+            ),
+        },
         "scheme": "TMS",
         "profile": "geodetic",
         "crs": "EPSG:4326",
@@ -431,6 +739,15 @@ def generate_pyramid_contents(
         "sourceGeographicDegreesPerPixel": (
             source_resolution
         ),
+        "visualRgbGeographicDegreesPerPixel": (
+            visual_rgb_resolution
+        ),
+        "detailGeographicDegreesPerPixel": (
+            detail_resolution
+        ),
+        "detailResolutionSource": (
+            detail_resolution_source
+        ),
         "minimumLevel": minimum_level,
         "maximumLevel": maximum_level,
         "totalTileCount": total_tiles,
@@ -443,6 +760,23 @@ def generate_pyramid_contents(
             (
                 "Unknown category pixels are rendered "
                 "transparent."
+            ),
+            (
+                "Slope is an optional presentation input and "
+                "does not define semantic surface identity."
+            ),
+            (
+                "Visual RGB is an optional presentation input and "
+                "does not define semantic surface identity."
+            ),
+            (
+                "Semantic source bounds define the published "
+                "regional extent."
+            ),
+            (
+                "When Visual RGB is present, its effective "
+                "geographic resolution determines the maximum "
+                "TMS detail level."
             ),
             (
                 "TMS Y coordinates increase from south "
@@ -467,6 +801,8 @@ def generate_pyramid_contents(
 def publish_pyramid(
     source_path: Path,
     output_directory: Path,
+    slope_path: Path | None = None,
+    visual_rgb_path: Path | None = None,
 ) -> dict:
     output_directory = output_directory.resolve()
     parent = output_directory.parent
@@ -485,6 +821,8 @@ def publish_pyramid(
         manifest = generate_pyramid_contents(
             source_path,
             staging,
+            slope_path=slope_path,
+            visual_rgb_path=visual_rgb_path,
         )
 
         validation = validate_pyramid(
@@ -551,12 +889,34 @@ def main() -> None:
             "data/generated/nlcd/surface-tms"
         ),
     )
+    parser.add_argument(
+        "--slope",
+        type=Path,
+        default=None,
+        help=(
+            "Optional aligned slope-in-degrees raster used "
+            "only as a presentation input."
+        ),
+    )
+
+    parser.add_argument(
+        "--visual-rgb",
+        type=Path,
+        default=None,
+        help=(
+            "Optional three-band uint8 RGB raster used as the "
+            "continuous visual basis. Its grid may differ from the "
+            "semantic source grid."
+        ),
+    )
 
     args = parser.parse_args()
 
     manifest = publish_pyramid(
         args.source,
         args.output_directory,
+        slope_path=args.slope,
+        visual_rgb_path=args.visual_rgb,
     )
 
     print(

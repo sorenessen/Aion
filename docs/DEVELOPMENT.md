@@ -1,6 +1,6 @@
 # Est Development Guide
 
-Canonical operational reference for local development and repository recovery. Distinguish verified commands from procedures not yet exercised on the user's machine.
+Canonical operational reference for local development and repository recovery. Procedures described as verified have been exercised in the documented development environment.
 
 ## Local Environment
 
@@ -37,27 +37,6 @@ python3 scripts/create-recovery-zip.py
 The script captures tracked and untracked, non-ignored files, including uncommitted source and documentation, and writes `Est-recovery.zip` beside the repository. It includes `Est/RECOVERY_STATUS.txt` with branch, commit, and worktree status. It excludes Git history, ignored build output, dependency caches, IDE state, and known ignored secrets. It skips symlinks rather than following them.
 
 Review the ZIP before sharing it. Ignore rules cannot guarantee that every untracked file is safe. The ZIP is a source snapshot, not a Git backup. Preserve the original repository. This recovery procedure was validated successfully on macOS Apple Silicon and produced an integrity-tested recovery ZIP.
-
-### Command-block integrity
-
-Every terminal instruction must be delivered as one complete, contiguous,
-copy-pasteable code block. One command block at a time means the entire
-runnable step, including heredocs and closing delimiters, must be contained
-inside one rendered block.
-
-Never place literal Markdown triple-backtick fences inside an outer command
-block. When generating Markdown that contains fenced code blocks, construct
-the fence at runtime (for example, `fence = chr(96) * 3`) or use another
-technique that cannot terminate the outer block.
-
-Before sending a command, verify that the entire script is contained in one
-rendered block and that no embedded content can prematurely close it. Do not
-split a runnable script across prose, multiple code blocks, or UI sections.
-If a command cannot be safely represented as one block, use a different
-delivery method rather than sending a partial script.
-
-This is a mandatory workflow requirement, not a formatting preference.
-Preserve it across handoffs and future development sessions.
 
 ## Run and Debug
 

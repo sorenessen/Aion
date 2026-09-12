@@ -6,6 +6,7 @@ import {
   Cartesian3,
   Color,
   createWorldTerrainAsync,
+  HeightReference,
   ImageryLayer,
   Ion,
   JulianDate,
@@ -48,6 +49,10 @@ app.innerHTML = `
       <button id="landCoverButton" type="button">Land Cover</button>
       <button id="estSurfaceButton" type="button">Est Surface Study</button>
       <button id="estSurfaceTmsButton" type="button">Est Surface TMS</button>
+      <button id="visualSurfaceButton" type="button">Est Visual Surface</button>
+      <button id="continuousSurfaceButton" type="button">Est Continuous Surface</button>
+      <button id="localGeometryButton" type="button">Local Geometry</button>
+      <button id="terrainGeometryButton" type="button">Est Terrain + Geometry</button>
       <button id="daylightButton" type="button" aria-pressed="false">Lighting: Real Time</button>
     </div>
 
@@ -128,6 +133,18 @@ const estSurfaceButton =
 
 const estSurfaceTmsButton =
   requireElement<HTMLButtonElement>('#estSurfaceTmsButton')
+
+const visualSurfaceButton =
+  requireElement<HTMLButtonElement>('#visualSurfaceButton')
+
+const continuousSurfaceButton =
+  requireElement<HTMLButtonElement>('#continuousSurfaceButton')
+
+const localGeometryButton =
+  requireElement<HTMLButtonElement>('#localGeometryButton')
+
+const terrainGeometryButton =
+  requireElement<HTMLButtonElement>('#terrainGeometryButton')
 
 const daylightButton =
   requireElement<HTMLButtonElement>('#daylightButton')
@@ -259,6 +276,133 @@ const surfaceTmsLayer =
 
 surfaceTmsLayer.show = false
 
+const visualSurfaceTmsProvider =
+  await TileMapServiceImageryProvider.fromUrl(
+    '/evaluation/nlcd-2025/visual-surface-tms/',
+    {
+      credit: 'USGS Annual NLCD 2025 / USGS 3DEP / Est Visual Surface Study',
+    },
+  )
+
+const visualSurfaceTmsLayer =
+  viewer.imageryLayers.addImageryProvider(
+    visualSurfaceTmsProvider,
+  )
+
+visualSurfaceTmsLayer.show = false
+
+const continuousSurfaceTmsProvider =
+  await TileMapServiceImageryProvider.fromUrl(
+    '/evaluation/nlcd-2025/continuous-surface-tms/',
+    {
+      credit: 'Copernicus Sentinel-2 / Est Continuous Visual Surface Study',
+    },
+  )
+
+const continuousSurfaceTmsLayer =
+  viewer.imageryLayers.addImageryProvider(
+    continuousSurfaceTmsProvider,
+  )
+
+continuousSurfaceTmsLayer.show = false
+
+type LocalSceneFeature = {
+  type: 'Feature'
+  properties: {
+    id: string
+    name?: string
+    heightMeters: number
+    heightSource: string
+  }
+  geometry: {
+    type: 'Polygon'
+    coordinates: number[][][]
+  }
+}
+
+type LocalSceneFeatureCollection = {
+  type: 'FeatureCollection'
+  estLocalSceneVersion: number
+  features: LocalSceneFeature[]
+}
+
+const localSceneEvaluation = {
+  name: 'Longmire',
+  url: '/evaluation/local-scene/rainier-longmire-buildings.geojson',
+  longitude: -121.8112,
+  latitude: 46.7495,
+  cameraHeight: 1800,
+} as const
+
+const localSceneResponse = await fetch(
+  localSceneEvaluation.url,
+)
+
+if (!localSceneResponse.ok) {
+  throw new Error(
+    `Could not load ${localSceneEvaluation.name} local-scene evaluation: ${localSceneResponse.status}`,
+  )
+}
+
+const localScene =
+  await localSceneResponse.json() as LocalSceneFeatureCollection
+
+if (
+  localScene.type !== 'FeatureCollection'
+  || localScene.estLocalSceneVersion !== 1
+) {
+  throw new Error('Unsupported Est local-scene evaluation asset.')
+}
+
+const localGeometryEntities = localScene.features.map((feature) => {
+  if (
+    feature.geometry.type !== 'Polygon'
+    || !Number.isFinite(feature.properties.heightMeters)
+    || feature.properties.heightMeters <= 0
+  ) {
+    throw new Error(
+      `Invalid Est local-scene building feature: ${feature.properties.id}`,
+    )
+  }
+
+  const ring = feature.geometry.coordinates[0]
+
+  if (!ring || ring.length < 4) {
+    throw new Error(
+      `Est local-scene building has no usable exterior ring: ${feature.properties.id}`,
+    )
+  }
+
+  const positions = ring
+    .slice(0, -1)
+    .map(([longitude, latitude]) =>
+      Cartesian3.fromDegrees(longitude, latitude),
+    )
+
+  const entity = viewer.entities.add({
+    id: feature.properties.id,
+    name: feature.properties.name,
+    show: false,
+    polygon: {
+      hierarchy: positions,
+      height: 0,
+      heightReference: HeightReference.RELATIVE_TO_GROUND,
+      extrudedHeight: feature.properties.heightMeters,
+      extrudedHeightReference: HeightReference.RELATIVE_TO_GROUND,
+      material: Color.fromBytes(196, 190, 176, 235),
+      outline: false,
+    },
+  })
+
+  return entity
+})
+
+function setLocalGeometryVisible(visible: boolean): void {
+  for (const entity of localGeometryEntities) {
+    entity.show = visible
+  }
+}
+
 const inspectionDaylightTime =
   JulianDate.fromIso8601('2026-06-21T20:00:00Z')
 
@@ -282,11 +426,14 @@ function applyInspectionLighting(): void {
 }
 
 function applyBaseline(): void {
+  setLocalGeometryVisible(false)
   viewer.scene.globe.material = undefined
   imageryLayer.show = true
   landCoverLayer.show = false
   surfaceLayer.show = false
   surfaceTmsLayer.show = false
+  visualSurfaceTmsLayer.show = false
+  continuousSurfaceTmsLayer.show = false
 
   viewer.scene.globe.lambertDiffuseMultiplier = 1
   viewer.scene.globe.atmosphereLightIntensity = 10
@@ -300,9 +447,12 @@ function applyBaseline(): void {
 }
 
 function applyEstLook(): void {
+  setLocalGeometryVisible(false)
   landCoverLayer.show = false
   surfaceLayer.show = false
   surfaceTmsLayer.show = false
+  visualSurfaceTmsLayer.show = false
+  continuousSurfaceTmsLayer.show = false
   imageryLayer.show = false
   viewer.scene.globe.material = terrainMaterial
 
@@ -313,11 +463,14 @@ function applyEstLook(): void {
 }
 
 function applyLandCover(): void {
+  setLocalGeometryVisible(false)
   viewer.scene.globe.material = undefined
   imageryLayer.show = false
   landCoverLayer.show = true
   surfaceLayer.show = false
   surfaceTmsLayer.show = false
+  visualSurfaceTmsLayer.show = false
+  continuousSurfaceTmsLayer.show = false
 
   viewer.scene.globe.lambertDiffuseMultiplier = 1
   viewer.scene.globe.atmosphereLightIntensity = 10
@@ -327,11 +480,14 @@ function applyLandCover(): void {
 }
 
 function applyEstSurface(): void {
+  setLocalGeometryVisible(false)
   viewer.scene.globe.material = undefined
   imageryLayer.show = false
   landCoverLayer.show = false
   surfaceLayer.show = true
   surfaceTmsLayer.show = false
+  visualSurfaceTmsLayer.show = false
+  continuousSurfaceTmsLayer.show = false
 
   viewer.scene.globe.lambertDiffuseMultiplier = 1
   viewer.scene.globe.atmosphereLightIntensity = 10
@@ -341,11 +497,14 @@ function applyEstSurface(): void {
 }
 
 function applyEstSurfaceTms(): void {
+  setLocalGeometryVisible(false)
   viewer.scene.globe.material = undefined
   imageryLayer.show = false
   landCoverLayer.show = false
   surfaceLayer.show = false
   surfaceTmsLayer.show = true
+  visualSurfaceTmsLayer.show = false
+  continuousSurfaceTmsLayer.show = false
 
   viewer.scene.globe.lambertDiffuseMultiplier = 1
   viewer.scene.globe.atmosphereLightIntensity = 10
@@ -354,10 +513,110 @@ function applyEstSurfaceTms(): void {
 
 }
 
+function applyVisualSurface(): void {
+  setLocalGeometryVisible(false)
+  viewer.scene.globe.material = undefined
+  imageryLayer.show = false
+  landCoverLayer.show = false
+  surfaceLayer.show = false
+  surfaceTmsLayer.show = false
+  visualSurfaceTmsLayer.show = true
+  continuousSurfaceTmsLayer.show = false
+
+  viewer.scene.globe.lambertDiffuseMultiplier = 1
+  viewer.scene.globe.atmosphereLightIntensity = 10
+
+  lookLabel.textContent = 'Est Visual Surface'
+}
+
+function applyContinuousSurface(): void {
+  setLocalGeometryVisible(false)
+  viewer.scene.globe.material = undefined
+  imageryLayer.show = false
+  landCoverLayer.show = false
+  surfaceLayer.show = false
+  surfaceTmsLayer.show = false
+  visualSurfaceTmsLayer.show = false
+  continuousSurfaceTmsLayer.show = true
+
+  viewer.scene.globe.lambertDiffuseMultiplier = 1
+  viewer.scene.globe.atmosphereLightIntensity = 10
+
+  lookLabel.textContent = 'Est Continuous Surface'
+}
+
+function flyToLocalSceneEvaluation(): void {
+  viewer.camera.flyTo({
+    destination: Cartesian3.fromDegrees(
+      localSceneEvaluation.longitude,
+      localSceneEvaluation.latitude,
+      localSceneEvaluation.cameraHeight,
+    ),
+    duration: 1.5,
+  })
+}
+
+function applyLocalGeometry(): void {
+  viewer.scene.globe.material = undefined
+  imageryLayer.show = true
+  landCoverLayer.show = false
+  surfaceLayer.show = false
+  surfaceTmsLayer.show = false
+  visualSurfaceTmsLayer.show = false
+  continuousSurfaceTmsLayer.show = false
+  setLocalGeometryVisible(true)
+
+  viewer.scene.globe.lambertDiffuseMultiplier = 1
+  viewer.scene.globe.atmosphereLightIntensity = 10
+
+  imageryLayer.brightness = 1
+  imageryLayer.contrast = 1
+  imageryLayer.saturation = 1
+  imageryLayer.gamma = 1
+
+  lookLabel.textContent = `Est Local Geometry · ${localSceneEvaluation.name}`
+
+  flyToLocalSceneEvaluation()
+}
+
+function applyTerrainGeometry(): void {
+  imageryLayer.show = false
+  landCoverLayer.show = false
+  surfaceLayer.show = false
+  surfaceTmsLayer.show = false
+  visualSurfaceTmsLayer.show = false
+  continuousSurfaceTmsLayer.show = false
+  viewer.scene.globe.material = terrainMaterial
+  setLocalGeometryVisible(true)
+
+  viewer.scene.globe.lambertDiffuseMultiplier = 1.15
+  viewer.scene.globe.atmosphereLightIntensity = 12
+
+  lookLabel.textContent = `Est Terrain + Local Geometry · ${localSceneEvaluation.name}`
+
+  flyToLocalSceneEvaluation()
+}
+
 estSurfaceButton.addEventListener('click', applyEstSurface)
 estSurfaceTmsButton.addEventListener(
   'click',
   applyEstSurfaceTms,
+)
+visualSurfaceButton.addEventListener(
+  'click',
+  applyVisualSurface,
+)
+continuousSurfaceButton.addEventListener(
+  'click',
+  applyContinuousSurface,
+)
+localGeometryButton.addEventListener(
+  'click',
+  applyLocalGeometry,
+)
+terrainGeometryButton.addEventListener(
+  'click',
+  applyTerrainGeometry,
 )
 daylightButton.addEventListener(
   'click',

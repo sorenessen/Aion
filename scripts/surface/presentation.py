@@ -43,6 +43,12 @@ class MaterialVariation:
 
 
 @dataclass(frozen=True)
+class SlopeResponse:
+    maximum_degrees: float
+    darkening: float
+
+
+@dataclass(frozen=True)
 class SurfaceMaterial:
     rgba: tuple[int, int, int, int]
     variation: MaterialVariation
@@ -53,6 +59,7 @@ class SurfacePresentation:
     version: int
     name: str
     materials_by_id: dict[int, SurfaceMaterial]
+    slope_response: SlopeResponse | None = None
 
     @property
     def rgba_by_id(
@@ -146,6 +153,51 @@ def load_surface_presentation_model() -> SurfacePresentation:
             variation=MaterialVariation(**variation_values),
         )
 
+    slope_response_definition = presentation_definition.get(
+        "slopeResponse"
+    )
+
+    slope_response = None
+
+    if slope_response_definition is not None:
+        if (
+            not isinstance(slope_response_definition, dict)
+            or set(slope_response_definition)
+            != {"maximumDegrees", "darkening"}
+        ):
+            raise ValueError(
+                "slopeResponse must define exactly "
+                "maximumDegrees and darkening."
+            )
+
+        maximum_degrees = slope_response_definition[
+            "maximumDegrees"
+        ]
+        darkening = slope_response_definition["darkening"]
+
+        if (
+            not isinstance(maximum_degrees, (int, float))
+            or isinstance(maximum_degrees, bool)
+            or float(maximum_degrees) <= 0.0
+        ):
+            raise ValueError(
+                "slopeResponse maximumDegrees must be positive."
+            )
+
+        if (
+            not isinstance(darkening, (int, float))
+            or isinstance(darkening, bool)
+            or not 0.0 <= float(darkening) <= 1.0
+        ):
+            raise ValueError(
+                "slopeResponse darkening must be between 0 and 1."
+            )
+
+        slope_response = SlopeResponse(
+            maximum_degrees=float(maximum_degrees),
+            darkening=float(darkening),
+        )
+
     unknown_id = int(categories["Unknown"]["id"])
     unknown = materials_by_id[unknown_id]
 
@@ -163,6 +215,7 @@ def load_surface_presentation_model() -> SurfacePresentation:
         version=int(presentation_definition["version"]),
         name=str(presentation_definition["name"]),
         materials_by_id=materials_by_id,
+        slope_response=slope_response,
     )
 
 
@@ -254,6 +307,8 @@ def render_surface_material(
     longitude: np.ndarray,
     latitude: np.ndarray,
     presentation: SurfacePresentation,
+    slope_degrees: np.ndarray | None = None,
+    visual_rgb: np.ndarray | None = None,
 ) -> np.ndarray:
     if categories.shape != longitude.shape:
         raise ValueError(
@@ -264,6 +319,50 @@ def render_surface_material(
         raise ValueError(
             "Category and latitude arrays must have matching shapes."
         )
+
+    if slope_degrees is not None:
+        if categories.shape != slope_degrees.shape:
+            raise ValueError(
+                "Category and slope arrays must have matching shapes."
+            )
+
+        if not np.all(np.isfinite(slope_degrees)):
+            raise ValueError(
+                "Slope values must be finite."
+            )
+
+        if np.any(slope_degrees < 0.0):
+            raise ValueError(
+                "Slope values cannot be negative."
+            )
+
+    if visual_rgb is not None:
+        expected_shape = (*categories.shape, 3)
+
+        if visual_rgb.shape != expected_shape:
+            raise ValueError(
+                "Visual RGB input must have shape "
+                f"{expected_shape}, got {visual_rgb.shape}."
+            )
+
+        if visual_rgb.dtype != np.uint8:
+            raise ValueError(
+                "Visual RGB input must use uint8 channels."
+            )
+
+        rgba = np.zeros(
+            (*categories.shape, 4),
+            dtype=np.uint8,
+        )
+
+        semantic_surface = categories != 0
+
+        rgba[semantic_surface, :3] = (
+            visual_rgb[semantic_surface]
+        )
+        rgba[semantic_surface, 3] = 255
+
+        return rgba
 
     broad_noise, medium_noise, fine_noise = (
         _material_noise_components(
@@ -297,6 +396,30 @@ def render_surface_material(
         )
 
         factor = 1.0 + tone[:, np.newaxis]
+
+        if (
+            slope_degrees is not None
+            and presentation.slope_response is not None
+        ):
+            response = presentation.slope_response
+
+            normalized_slope = np.clip(
+                slope_degrees[mask]
+                / response.maximum_degrees,
+                0.0,
+                1.0,
+            )
+
+            slope_factor = (
+                1.0
+                - normalized_slope
+                * response.darkening
+            )
+
+            factor = (
+                factor
+                * slope_factor[:, np.newaxis]
+            )
 
         varied_rgb = np.clip(
             np.rint(base * factor),

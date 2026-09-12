@@ -22,7 +22,6 @@ Build the smallest complete vertical foundation for Est: one persistent planet, 
 - [x] Establish README
 - [x] Establish project charter
 - [x] Establish backlog
-- [x] Establish handoff document
 
 ### Architecture Foundation
 
@@ -381,5 +380,29 @@ These are intentionally not rejected. They are simply not allowed to distort Fir
 - [x] Evaluate the first deterministic natural material treatment at close range and preserve its architectural seam for category-specific follow-up.
 - [x] Evaluate category-specific broad/medium/fine material structure and confirm that classified-raster geometry, not generic tonal variation, is now the dominant close-range visual limitation.
 - [x] Evaluate whether semantic-boundary treatment is the next visual surface direction; source-class comparison showed that direct categorical rendering remains the limiting model even when richer NLCD structure is preserved.
-- [ ] Define a visual-surface input/composition seam separate from authoritative Est surface semantics.
+- [x] Define and prove a visual-surface input/composition seam separate from authoritative Est surface semantics; terrain-derived slope now influences presentation without changing semantic identity, coverage, or renderer ownership.
+- [x] Define the next visual-surface composition model so categorical land-cover geometry can inform appearance without being directly exposed as the rendered surface. Continuous Sentinel-2 RGB now provides the visual basis while Est semantics independently define surface identity and coverage.
+- [x] Decouple visual-surface resolution from semantic-grid resolution so approximately 10-meter imagery detail is preserved instead of being downsampled onto the approximately 30-meter semantic grid before composition.
+- [x] Derive visual TMS detail level from the effective visual-source resolution rather than the semantic raster resolution.
+- [x] Evaluate the resulting 10-meter Sentinel-2 surface through a level-13 regional TMS and confirm that the pipeline preserves additional source detail but remains insufficient for close-range urban representation.
+- [x] Conclude the raster-resolution escalation experiment: do not pursue additional Sentinel zoom levels, sharpening, interpolation, semantic tinting, or slope tuning as substitutes for local geometric detail.
 - [ ] Harden and test TMS publication rollback behavior.
+
+## Multi-scale presentation evaluation
+
+The regional surface experiments established that no single representation
+should be expected to serve planetary, regional, city, and street scales.
+Preserve authoritative Est world state independently of presentation while
+evaluating progressively richer visual representations as camera distance
+decreases.
+
+- [x] Prove the local-geometry hypothesis with a deliberately small Washington State Capitol campus vertical slice.
+- [x] Acquire real building footprints for the Capitol evaluation area without committing large or disposable source extracts by default.
+- [x] Define a renderer-neutral Est local-scene artifact for the building spike rather than exposing OSM semantics directly to Cesium.
+- [x] Render recognizable building geometry over terrain and imagery without moving semantic or simulation ownership into Cesium.
+- [x] Evaluate the visual transition from regional imagery at altitude to local building geometry during descent.
+- [x] Decide from the building spike whether roads, vegetation, water features, and other local geometry should be evaluated next.
+- [ ] Define scale/LOD boundaries only after the local-scene experiments provide sufficient evidence for the required transition behavior.
+- [x] Prove that regional terrain/surface presentation and mapped local geometry can coexist in one descent path in a terrain-rich Mount Rainier environment; the Longmire evaluation preserved coherent terrain-relative building geometry from landscape scale through close descent.
+- [x] Validate the local-scene preparation/rendering boundary in materially different environments: dense Olympia civic/urban structure and sparse Longmire mountain structures.
+- [ ] Evaluate the next local spatial capability based on simulation and world-structure value rather than cosmetic polish; likely candidates include roads or richer building structure.
