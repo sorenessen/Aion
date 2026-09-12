@@ -52,6 +52,7 @@ app.innerHTML = `
       <button id="visualSurfaceButton" type="button">Est Visual Surface</button>
       <button id="continuousSurfaceButton" type="button">Est Continuous Surface</button>
       <button id="localGeometryButton" type="button">Local Geometry</button>
+      <button id="terrainGeometryButton" type="button">Est Terrain + Geometry</button>
       <button id="daylightButton" type="button" aria-pressed="false">Lighting: Real Time</button>
     </div>
 
@@ -141,6 +142,9 @@ const continuousSurfaceButton =
 
 const localGeometryButton =
   requireElement<HTMLButtonElement>('#localGeometryButton')
+
+const terrainGeometryButton =
+  requireElement<HTMLButtonElement>('#terrainGeometryButton')
 
 const daylightButton =
   requireElement<HTMLButtonElement>('#daylightButton')
@@ -533,6 +537,17 @@ function applyContinuousSurface(): void {
   lookLabel.textContent = 'Est Continuous Surface'
 }
 
+function flyToCapitolEvaluation(): void {
+  viewer.camera.flyTo({
+    destination: Cartesian3.fromDegrees(
+      -122.90484,
+      47.03576,
+      850,
+    ),
+    duration: 1.5,
+  })
+}
+
 function applyLocalGeometry(): void {
   viewer.scene.globe.material = undefined
   imageryLayer.show = true
@@ -553,14 +568,25 @@ function applyLocalGeometry(): void {
 
   lookLabel.textContent = 'Est Local Geometry'
 
-  viewer.camera.flyTo({
-    destination: Cartesian3.fromDegrees(
-      -122.90484,
-      47.03576,
-      850,
-    ),
-    duration: 1.5,
-  })
+  flyToCapitolEvaluation()
+}
+
+function applyTerrainGeometry(): void {
+  imageryLayer.show = false
+  landCoverLayer.show = false
+  surfaceLayer.show = false
+  surfaceTmsLayer.show = false
+  visualSurfaceTmsLayer.show = false
+  continuousSurfaceTmsLayer.show = false
+  viewer.scene.globe.material = terrainMaterial
+  setLocalGeometryVisible(true)
+
+  viewer.scene.globe.lambertDiffuseMultiplier = 1.15
+  viewer.scene.globe.atmosphereLightIntensity = 12
+
+  lookLabel.textContent = 'Est Terrain + Local Geometry'
+
+  flyToCapitolEvaluation()
 }
 
 estSurfaceButton.addEventListener('click', applyEstSurface)
@@ -579,6 +605,10 @@ continuousSurfaceButton.addEventListener(
 localGeometryButton.addEventListener(
   'click',
   applyLocalGeometry,
+)
+terrainGeometryButton.addEventListener(
+  'click',
+  applyTerrainGeometry,
 )
 daylightButton.addEventListener(
   'click',
