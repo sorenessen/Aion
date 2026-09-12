@@ -326,13 +326,21 @@ type LocalSceneFeatureCollection = {
   features: LocalSceneFeature[]
 }
 
+const localSceneEvaluation = {
+  name: 'Longmire',
+  url: '/evaluation/local-scene/rainier-longmire-buildings.geojson',
+  longitude: -121.8112,
+  latitude: 46.7495,
+  cameraHeight: 1800,
+} as const
+
 const localSceneResponse = await fetch(
-  '/evaluation/local-scene/olympia-capitol-buildings.geojson',
+  localSceneEvaluation.url,
 )
 
 if (!localSceneResponse.ok) {
   throw new Error(
-    `Could not load Olympia local-scene evaluation: ${localSceneResponse.status}`,
+    `Could not load ${localSceneEvaluation.name} local-scene evaluation: ${localSceneResponse.status}`,
   )
 }
 
@@ -537,12 +545,12 @@ function applyContinuousSurface(): void {
   lookLabel.textContent = 'Est Continuous Surface'
 }
 
-function flyToCapitolEvaluation(): void {
+function flyToLocalSceneEvaluation(): void {
   viewer.camera.flyTo({
     destination: Cartesian3.fromDegrees(
-      -122.90484,
-      47.03576,
-      850,
+      localSceneEvaluation.longitude,
+      localSceneEvaluation.latitude,
+      localSceneEvaluation.cameraHeight,
     ),
     duration: 1.5,
   })
@@ -566,9 +574,9 @@ function applyLocalGeometry(): void {
   imageryLayer.saturation = 1
   imageryLayer.gamma = 1
 
-  lookLabel.textContent = 'Est Local Geometry'
+  lookLabel.textContent = `Est Local Geometry · ${localSceneEvaluation.name}`
 
-  flyToCapitolEvaluation()
+  flyToLocalSceneEvaluation()
 }
 
 function applyTerrainGeometry(): void {
@@ -584,9 +592,9 @@ function applyTerrainGeometry(): void {
   viewer.scene.globe.lambertDiffuseMultiplier = 1.15
   viewer.scene.globe.atmosphereLightIntensity = 12
 
-  lookLabel.textContent = 'Est Terrain + Local Geometry'
+  lookLabel.textContent = `Est Terrain + Local Geometry · ${localSceneEvaluation.name}`
 
-  flyToCapitolEvaluation()
+  flyToLocalSceneEvaluation()
 }
 
 estSurfaceButton.addEventListener('click', applyEstSurface)

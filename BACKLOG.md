@@ -402,6 +402,7 @@ decreases.
 - [x] Render recognizable building geometry over terrain and imagery without moving semantic or simulation ownership into Cesium.
 - [x] Evaluate the visual transition from regional imagery at altitude to local building geometry during descent.
 - [x] Decide from the building spike whether roads, vegetation, water features, and other local geometry should be evaluated next.
-- [ ] Define scale/LOD boundaries only after the local-scene experiment provides evidence for the required transition behavior.
-- [ ] Prove that Est-owned regional terrain/surface presentation and mapped local geometry can coexist in one descent path, using a terrain-rich area such as the Mount Rainier foothills when the required local feature data is available.
+- [ ] Define scale/LOD boundaries only after the local-scene experiments provide sufficient evidence for the required transition behavior.
+- [x] Prove that regional terrain/surface presentation and mapped local geometry can coexist in one descent path in a terrain-rich Mount Rainier environment; the Longmire evaluation preserved coherent terrain-relative building geometry from landscape scale through close descent.
+- [x] Validate the local-scene preparation/rendering boundary in materially different environments: dense Olympia civic/urban structure and sparse Longmire mountain structures.
 - [ ] Evaluate the next local spatial capability based on simulation and world-structure value rather than cosmetic polish; likely candidates include roads or richer building structure.

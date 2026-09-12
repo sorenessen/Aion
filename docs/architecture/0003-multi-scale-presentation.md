@@ -112,6 +112,33 @@ persistent, independently addressable geometry capable of receiving richer
 presentation and, where appropriate in future architecture, state derived from
 the authoritative Est world.
 
+A second focused experiment then moved the same local-scene preparation and
+rendering boundary to Longmire in Mount Rainier National Park. This provided a
+materially different environment from the Olympia civic/urban test: sparse
+mapped structures, steep mountainous terrain, dense forest, and strong terrain
+relief.
+
+The Longmire evaluation validated that the local-geometry approach is not
+specific to a flat urban environment or dependent on an urban imagery context.
+Prepared building geometry remained geographically coherent and
+terrain-relative across broad landscape views, oblique descent, close
+ground-facing views, and direct comparison with the underlying imagery.
+Buildings remained independently addressable three-dimensional structures
+while the surrounding terrain and imagery continued to provide the regional
+landscape representation.
+
+Together, Olympia and Longmire establish the first cross-environment evidence
+for the multi-scale presentation decision. Regional landscape representation
+and local structural geometry can coexist without requiring either
+representation to own the other's responsibilities. Imagery may contribute
+useful appearance and alignment context without becoming the structural model
+of a building, while local geometry can provide persistent structure without
+becoming authoritative simulation state.
+
+This does not yet establish automatic LOD selection, streaming, detailed
+architecture, material generation, or simulation-driven local state. Those
+remain separate capabilities to prove when required.
+
 ## Consequences
 
 Positive:

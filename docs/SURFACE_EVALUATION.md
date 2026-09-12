@@ -508,3 +508,62 @@ permanent local renderer. Those remain evidence-driven follow-up decisions.
 The next local-scene work should continue to prioritize capability over
 cosmetic polish. Uniform building materials are sufficient while Est proves
 which additional spatial structures and state-bearing boundaries are required.
+
+## Longmire cross-environment local-geometry checkpoint
+
+On September 12, 2026, the local-geometry evaluation moved from the Washington
+State Capitol urban/civic environment to Longmire in Mount Rainier National
+Park.
+
+The purpose was not to improve the appearance of the neutral building
+extrusions. It was to test whether the same renderer-neutral local-scene
+boundary remained useful in a terrain-rich environment where regional
+landscape presentation is visually dominant and mapped structures are sparse.
+
+The Longmire evaluation reused the existing Est local-scene preparation model:
+OpenStreetMap building ways are normalized before reaching Cesium, building
+height is represented through Est-defined `heightMeters`, and Cesium consumes
+the prepared geographic geometry rather than interpreting raw OSM building
+semantics.
+
+Browser inspection provided strong positive evidence across several camera
+conditions. From broad mountainous views, the structures remain spatially
+coherent within the valley rather than behaving like raster detail. During
+oblique descent they remain terrain-relative three-dimensional objects against
+steep surrounding relief. At close range their footprint and volume remain
+legible. Top-down comparison with the underlying imagery also showed strong
+geographic agreement between prepared geometry and visible building locations.
+
+The result is significant because Olympia and Longmire exercise the same
+presentation boundary in materially different environments. Olympia
+demonstrated dense urban/civic structure. Longmire demonstrates sparse local
+structure embedded in a terrain-dominant mountain landscape.
+
+This validates the composition model:
+
+`terrain -> regional surface/imagery -> mapped spatial features -> local geometry`
+
+The layers have distinct responsibilities. Terrain describes land form.
+Regional surface treatment or imagery provides broad visual appearance.
+Prepared local geometry provides persistent, independently addressable
+structures. None of those presentation representations becomes authoritative
+simulation state merely by being rendered.
+
+The comparison also clarifies the role of imagery. High-quality imagery can be
+extremely useful as regional or local appearance and as a visual alignment
+reference without being required to carry structural responsibility for
+buildings. A building can visually coincide with imagery while remaining a
+separate Est-prepared geometric object that can later receive materials,
+richer architectural representation, effects, or state derived from the
+authoritative world.
+
+The neutral extrusions remain intentionally crude. Approximate heights, simple
+roof forms, uniform materials, missing facade detail, and incomplete source
+metadata are not failures of this checkpoint. The experiment validates spatial
+composition and ownership boundaries, not final presentation quality.
+
+Do not infer from this checkpoint that Est has solved automatic LOD selection,
+geometry streaming, planetary local-feature storage, detailed building
+generation, material generation, vegetation geometry, road geometry, or
+simulation-driven building behavior. Those remain evidence-driven follow-up
+work.
