@@ -4,9 +4,9 @@
 
 ## A living planetary simulation.
 
-<img width="250" height="180" alt="Screenshot 2026-09-12 at 12 15 04 AM" src="https://github.com/user-attachments/assets/895fbcd6-9f3a-4e35-a544-77fc7629683c" />
-<img width="250" height="180" alt="Screenshot 2026-09-12 at 12 08 40 AM" src="https://github.com/user-attachments/assets/b1a3c767-a876-4bf4-ade0-0e979c52458e" />
-<img width="250" height="180" alt="Screenshot 2026-09-12 at 12 07 52 AM" src="https://github.com/user-attachments/assets/acbe955c-f79f-436d-be10-cb4aa3daef6e" />
+<img width="250" height="120" alt="Screenshot 2026-09-12 at 12 15 04 AM" src="https://github.com/user-attachments/assets/895fbcd6-9f3a-4e35-a544-77fc7629683c" />
+<img width="250" height="120" alt="Screenshot 2026-09-12 at 12 08 40 AM" src="https://github.com/user-attachments/assets/b1a3c767-a876-4bf4-ade0-0e979c52458e" />
+<img width="250" height="120" alt="Screenshot 2026-09-12 at 12 07 52 AM" src="https://github.com/user-attachments/assets/acbe955c-f79f-436d-be10-cb4aa3daef6e" />
 
 
 Est is a simulation-first platform for modeling worlds as interconnected physical, environmental, biological, societal, and eventually individual systems that evolve through time.
