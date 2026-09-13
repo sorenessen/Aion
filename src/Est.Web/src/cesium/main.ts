@@ -29,6 +29,7 @@ import {
   sampleTerrainMostDetailed,
   SingleTileImageryProvider,
   TileMapServiceImageryProvider,
+  UrlTemplateImageryProvider,
   Viewer,
   WebMapServiceImageryProvider,
 } from 'cesium'
@@ -91,6 +92,7 @@ appRoot.innerHTML = `
       <div class="render-evaluation-actions">
         <button id="baselineButton" type="button">Baseline</button>
         <button id="photorealisticButton" type="button">Google Photo 3D</button>
+        <button id="nightEarthButton" type="button">Night Earth</button>
         <button id="estCgButton" type="button">Est CG World</button>
         <button id="estButton" type="button">Terrain Study</button>
         <button id="landCoverButton" type="button">Land Cover</button>
@@ -137,6 +139,12 @@ const landCoverProvider = new WebMapServiceImageryProvider({
   credit: 'USGS / MRLC Annual NLCD',
 })
 
+const nightLightsProvider = new UrlTemplateImageryProvider({
+  url: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Night_Lights/default/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png',
+  maximumLevel: 8,
+  credit: 'NASA GIBS / VIIRS Black Marble',
+})
+
 const viewer = new Viewer('cesiumContainer', {
   terrainProvider,
   baseLayer: imageryLayer,
@@ -151,6 +159,16 @@ const viewer = new Viewer('cesiumContainer', {
   selectionIndicator: false,
   timeline: false,
 })
+
+const nightLightsLayer =
+  viewer.imageryLayers.addImageryProvider(
+    nightLightsProvider,
+  )
+
+nightLightsLayer.show = false
+nightLightsLayer.brightness = 1.15
+nightLightsLayer.contrast = 1.15
+nightLightsLayer.saturation = 1.1
 
 const globalBuildings =
   await createOsmBuildingsAsync({
@@ -210,6 +228,9 @@ const baselineButton =
 
 const photorealisticButton =
   requireElement<HTMLButtonElement>('#photorealisticButton')
+
+const nightEarthButton =
+  requireElement<HTMLButtonElement>('#nightEarthButton')
 
 const estCgButton =
   requireElement<HTMLButtonElement>('#estCgButton')
@@ -965,6 +986,7 @@ function applyAutomaticPresentation(): void {
 }
 
 function enableAutomaticScale(): void {
+  viewer.scene.globe.enableLighting = true
   automaticScaleEnabled = true
   automaticPolicyCheckCount = 0
   automaticRepresentationTransitionCount = 0
@@ -1013,11 +1035,13 @@ function applyInspectionLighting(): void {
 }
 
 function applyBaseline(): void {
+  viewer.scene.globe.enableLighting = true
   disableAutomaticScale()
   setLocalGeometryVisible(false)
   photorealisticTiles.show = false
   globalBuildings.show = true
   globalBuildings.style = undefined
+  nightLightsLayer.show = false
   viewer.scene.globe.show = true
   viewer.scene.globe.material = undefined
   imageryLayer.show = true
@@ -1044,17 +1068,45 @@ function applyPhotorealistic(): void {
 
   photorealisticTiles.show = true
   globalBuildings.show = false
+  nightLightsLayer.show = false
   viewer.scene.globe.show = false
 
   lookLabel.textContent = 'Google Photorealistic 3D'
 }
 
+function applyNightEarth(): void {
+  disableAutomaticScale()
+  setLocalGeometryVisible(false)
+
+  photorealisticTiles.show = false
+  globalBuildings.show = false
+
+  viewer.scene.globe.show = true
+  viewer.scene.globe.material = undefined
+
+  imageryLayer.show = false
+  landCoverLayer.show = false
+  surfaceLayer.show = false
+  surfaceTmsLayer.show = false
+  visualSurfaceTmsLayer.show = false
+  continuousSurfaceTmsLayer.show = false
+  nightLightsLayer.show = true
+
+  viewer.scene.globe.enableLighting = false
+  viewer.scene.globe.lambertDiffuseMultiplier = 1
+  viewer.scene.globe.atmosphereLightIntensity = 6
+
+  lookLabel.textContent = 'NASA VIIRS Night Earth'
+}
+
 function applyEstCgWorld(): void {
+  viewer.scene.globe.enableLighting = true
   disableAutomaticScale()
   setLocalGeometryVisible(false)
 
   photorealisticTiles.show = false
   globalBuildings.show = true
+  nightLightsLayer.show = false
   globalBuildings.style = new Cesium3DTileStyle({
     color: "color('#d8cbb7')",
   })
@@ -1076,6 +1128,7 @@ function applyEstCgWorld(): void {
 }
 
 function applyEstLook(): void {
+  viewer.scene.globe.enableLighting = true
   disableAutomaticScale()
   setLocalGeometryVisible(false)
   landCoverLayer.show = false
@@ -1093,6 +1146,7 @@ function applyEstLook(): void {
 }
 
 function applyLandCover(): void {
+  viewer.scene.globe.enableLighting = true
   disableAutomaticScale()
   setLocalGeometryVisible(false)
   viewer.scene.globe.material = undefined
@@ -1111,6 +1165,7 @@ function applyLandCover(): void {
 }
 
 function applyEstSurface(): void {
+  viewer.scene.globe.enableLighting = true
   disableAutomaticScale()
   setLocalGeometryVisible(false)
   viewer.scene.globe.material = undefined
@@ -1129,6 +1184,7 @@ function applyEstSurface(): void {
 }
 
 function applyEstSurfaceTms(): void {
+  viewer.scene.globe.enableLighting = true
   disableAutomaticScale()
   setLocalGeometryVisible(false)
   viewer.scene.globe.material = undefined
@@ -1147,6 +1203,7 @@ function applyEstSurfaceTms(): void {
 }
 
 function applyVisualSurface(): void {
+  viewer.scene.globe.enableLighting = true
   disableAutomaticScale()
   setLocalGeometryVisible(false)
   viewer.scene.globe.material = undefined
@@ -1164,6 +1221,7 @@ function applyVisualSurface(): void {
 }
 
 function applyContinuousSurface(): void {
+  viewer.scene.globe.enableLighting = true
   disableAutomaticScale()
   setLocalGeometryVisible(false)
   viewer.scene.globe.material = undefined
@@ -1192,6 +1250,7 @@ function flyToLocalSceneEvaluation(): void {
 }
 
 function applyLocalGeometry(): void {
+  viewer.scene.globe.enableLighting = true
   disableAutomaticScale()
   viewer.scene.globe.material = undefined
   imageryLayer.show = true
@@ -1216,6 +1275,7 @@ function applyLocalGeometry(): void {
 }
 
 function applyTerrainGeometry(): void {
+  viewer.scene.globe.enableLighting = true
   disableAutomaticScale()
   imageryLayer.show = false
   landCoverLayer.show = false
@@ -1271,6 +1331,10 @@ baselineButton.addEventListener('click', applyBaseline)
 photorealisticButton.addEventListener(
   'click',
   applyPhotorealistic,
+)
+nightEarthButton.addEventListener(
+  'click',
+  applyNightEarth,
 )
 estCgButton.addEventListener(
   'click',
