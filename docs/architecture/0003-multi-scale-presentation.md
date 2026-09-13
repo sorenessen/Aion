@@ -309,6 +309,46 @@ not solve occlusion. It establishes a cleaner semantic seam while preserving
 freedom to replace the renderer-side measurement technique.
 
 
+### View-relative surface distance as a scale candidate
+
+The current `cameraHeightMeters` policy input remains a provisional
+renderer-derived scale proxy rather than a settled semantic contract.
+
+A Cesium-only follow-up measured distance from the observer to the terrain
+intersection at the center of the viewport. Olympia testing showed that this
+measurement responds to view geometry in ways that cartographic height and
+distance to the local-scene bounding sphere do not. Similar camera heights can
+produce different viewed-surface relationships, and local-scene distance can
+remain zero across substantially different visual scales when the observer is
+inside the representation's aggregate bounds.
+
+A center ray can also legitimately have no world-surface intersection, such as
+when the Observatory observer looks into the sky. Absence of such an
+intersection is an observer/view state, not an invalid camera state.
+
+This supports separating renderer-specific measurements from a future
+renderer-neutral presentation-scale concept. It does not establish
+center-surface distance itself as that concept. In particular, a single center
+ray can be discontinuous near the horizon.
+
+A five-point viewport sampling experiment subsequently showed that the
+view-to-world relationship remains informative when a single center ray becomes
+fragile. A horizon-facing Olympia view produced four coherent nearby surface
+intersections while the upper sample legitimately had no intersection, and a
+sky-facing view produced no intersections at all.
+
+This evidence suggests that a future renderer-neutral presentation-scale
+concept should be derived from sampled view-to-world relationships rather than
+defined directly as cartographic camera altitude or distance to a particular
+local representation.
+
+The sampled relationship appears to contain at least two semantic facts:
+surface-intersection availability or prevalence across the view, and the
+distance distribution of the valid intersections. No aggregation statistic,
+sample layout, scale threshold, or production policy is established by this
+experiment. The renderer-neutral view context remains unchanged until those
+choices have stronger evidence.
+
 ## Consequences
 
 Positive:

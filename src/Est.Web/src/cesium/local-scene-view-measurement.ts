@@ -1,5 +1,6 @@
 import {
   BoundingSphere,
+  Cartesian2,
   Cartesian3,
   type Viewer,
 } from 'cesium'
@@ -17,6 +18,8 @@ export interface LocalScenePresentationFeature {
 export interface LocalSceneViewMeasurement {
   cameraHeightMeters: number
   distanceToLocalSceneMeters: number
+  centerViewSurfaceDistanceMeters: number | undefined
+  viewSurfaceSampleDistancesMeters: readonly (number | undefined)[]
   localSceneVisibleFeatureCount: number
   localSceneFeatureBoxCoverage: number
   localSceneFeatureBoxUnionCoverage: number
@@ -59,6 +62,57 @@ export function createLocalSceneViewMeasurementAdapter(
 
       const canvasHeight =
         viewer.scene.canvas.clientHeight
+
+      const viewSurfaceSamplePoints = [
+        new Cartesian2(
+          canvasWidth * 0.5,
+          canvasHeight * 0.5,
+        ),
+        new Cartesian2(
+          canvasWidth * 0.25,
+          canvasHeight * 0.5,
+        ),
+        new Cartesian2(
+          canvasWidth * 0.75,
+          canvasHeight * 0.5,
+        ),
+        new Cartesian2(
+          canvasWidth * 0.5,
+          canvasHeight * 0.25,
+        ),
+        new Cartesian2(
+          canvasWidth * 0.5,
+          canvasHeight * 0.75,
+        ),
+      ]
+
+      const viewSurfaceSampleDistancesMeters =
+        viewSurfaceSamplePoints.map((samplePoint) => {
+          const sampleRay =
+            viewer.camera.getPickRay(samplePoint)
+
+          if (sampleRay === undefined) {
+            return undefined
+          }
+
+          const surfacePosition =
+            viewer.scene.globe.pick(
+              sampleRay,
+              viewer.scene,
+            )
+
+          if (surfacePosition === undefined) {
+            return undefined
+          }
+
+          return Cartesian3.distance(
+            viewer.camera.positionWC,
+            surfacePosition,
+          )
+        })
+
+      const centerViewSurfaceDistanceMeters =
+        viewSurfaceSampleDistancesMeters[0]
 
       const viewportArea =
         canvasWidth * canvasHeight
@@ -162,6 +216,8 @@ export function createLocalSceneViewMeasurementAdapter(
       return {
         cameraHeightMeters,
         distanceToLocalSceneMeters,
+        centerViewSurfaceDistanceMeters,
+        viewSurfaceSampleDistancesMeters,
         localSceneVisibleFeatureCount,
         localSceneFeatureBoxCoverage,
         localSceneFeatureBoxUnionCoverage,

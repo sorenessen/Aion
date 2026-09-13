@@ -820,3 +820,88 @@ The test also provided additional stress evidence for the Observatory observer
 model: below-reference and otherwise unconventional finite camera states
 continued through presentation evaluation without policy exceptions after the
 non-negative camera-height assumption was removed.
+
+### Center-view surface-distance scale experiment
+
+The next Phase 7 scale experiment tested whether distance from the observer to
+the world surface actually being viewed provides a more useful presentation
+scale signal than Cesium cartographic camera height or distance to the current
+local-scene representation.
+
+The Cesium evaluation adapter now casts a ray through the center of the
+viewport and, when that ray intersects the terrain globe, reports the
+observer-to-surface distance. The measurement remains Cesium-side and
+diagnostic-only. It does not participate in `PresentationViewContext` or
+presentation-policy decisions.
+
+Olympia produced several useful contrasting observations:
+
+- at approximately -15 metres cartographic height while embedded in the local
+  scene, local-scene distance was 0 metres and center-view surface distance was
+  approximately 12 metres;
+- at the same approximately -15-metre cartographic height while looking
+  horizontally across the lake, local-scene distance was approximately 760
+  metres while center-view surface distance was approximately 6 metres;
+- at street level, approximately 18 metres cartographic height, center-view
+  surface distance was approximately 19 metres;
+- from a low oblique view at approximately 57 metres cartographic height,
+  center-view surface distance increased to approximately 105 metres;
+- from a nearly top-down view at approximately 339 metres cartographic height,
+  center-view surface distance was approximately 322 metres;
+- from a regional oblique view at approximately 2,188 metres cartographic
+  height, center-view surface distance was approximately 15,182 metres; and
+- while looking into the sky at approximately 38 metres cartographic height,
+  the center ray had no terrain intersection and the diagnostic correctly
+  reported no center-surface distance.
+
+These observations distinguish three different concepts. Cartographic height
+describes the observer relative to Cesium's reference ellipsoid.
+`distanceToLocalSceneMeters` describes the observer relative to the current
+local representation's aggregate bounding sphere and can collapse to zero
+across materially different views when the observer lies inside that sphere.
+Center-view surface distance instead changes with view direction and the world
+surface actually being observed.
+
+The experiment therefore provides evidence that cartographic camera height
+should not automatically become Est's renderer-neutral definition of
+presentation scale, and that distance to a particular local representation is
+also insufficient as that definition.
+
+A single center ray is not promoted as the replacement. Near a horizon, a
+small orientation change can move the center ray between a distant terrain
+intersection and no intersection at all.
+
+### Multi-sample view-surface scale experiment
+
+A follow-up diagnostic sampled five fixed viewport positions: center, left,
+right, upper, and lower. Each sample independently cast a ray against the
+terrain globe. The diagnostic deliberately exposed the raw hit count and
+distances rather than choosing an aggregation rule in advance.
+
+Olympia produced three especially useful regimes:
+
+- a sky-facing view produced 0/5 surface intersections, with all five samples
+  reporting no distance;
+- a low horizon-facing view at approximately 18 metres cartographic height
+  produced 4/5 intersections: approximately 47, 50, 49, no intersection, and
+  24 metres for center, left, right, upper, and lower respectively; and
+- an extremely close surface view produced 5/5 intersections with all five
+  samples at approximately 2 metres.
+
+The horizon-facing case demonstrates why a single center ray is too brittle as
+the complete scale definition. The upper sample legitimately sees sky while
+the remaining samples continue to describe a coherent local-scale relationship
+to the world surface.
+
+The experiment also suggests that a sampled view-to-world relationship contains
+at least two distinct facts: how much of the sampled view intersects the world,
+and the distribution of distances among the samples that do intersect it.
+A 0/5 sky-facing view is therefore not an infinite-distance or invalid view.
+It is a valid observer state for which sampled surface-distance scale is
+unavailable.
+
+These results support deriving a future renderer-neutral presentation-scale
+concept from view-relative world measurements rather than directly equating
+presentation scale with cartographic camera altitude. They do not yet establish
+the number or placement of production samples, an aggregation statistic, final
+scale thresholds, or the policy behavior for partially surface-facing views.

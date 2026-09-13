@@ -820,6 +820,8 @@ function updateAutomaticPresentationStatus(
   const {
     cameraHeightMeters,
     distanceToLocalSceneMeters,
+    centerViewSurfaceDistanceMeters,
+    viewSurfaceSampleDistancesMeters,
     localSceneVisibleFeatureCount,
     localSceneFeatureBoxCoverage,
     localSceneFeatureBoxUnionCoverage,
@@ -836,6 +838,27 @@ function updateAutomaticPresentationStatus(
       ? 'none'
       : `${formatMeters(lastPolicyEvaluationHeightMeters)} m high / ${formatMeters(lastPolicyEvaluationDistanceMeters)} m away`
 
+  const centerViewSurfaceDistanceLabel =
+    centerViewSurfaceDistanceMeters === undefined
+      ? 'none'
+      : `${formatMeters(centerViewSurfaceDistanceMeters)} m`
+
+  const viewSurfaceSampleLabels =
+    viewSurfaceSampleDistancesMeters.map((distance) =>
+      distance === undefined
+        ? 'none'
+        : `${formatMeters(distance)} m`,
+    )
+
+  const viewSurfaceHitCount =
+    viewSurfaceSampleDistancesMeters.filter(
+      (distance) => distance !== undefined,
+    ).length
+
+  const viewSurfaceSamplesLabel =
+    `${viewSurfaceHitCount}/${viewSurfaceSampleDistancesMeters.length}`
+    + ` [${viewSurfaceSampleLabels.join(', ')}]`
+
   const featureBoxCoverageLabel =
     (localSceneFeatureBoxCoverage * 100).toFixed(1)
 
@@ -843,7 +866,8 @@ function updateAutomaticPresentationStatus(
     (localSceneFeatureBoxUnionCoverage * 100).toFixed(1)
 
   presentationStatus.textContent =
-    `Live: ${formatMeters(cameraHeightMeters)} m high / ${formatMeters(distanceToLocalSceneMeters)} m away`
+    `Live: ${formatMeters(cameraHeightMeters)} m high / ${formatMeters(distanceToLocalSceneMeters)} m away / center surface ${centerViewSurfaceDistanceLabel}`
+    + ` · Surface samples C/L/R/U/D ${viewSurfaceSamplesLabel}`
     + ` · ${localSceneEvaluation.name}: visible features ${localSceneVisibleFeatureCount}/${localScenePresentationFeatures.length} / feature boxes ${featureBoxCoverageLabel}% aggregate / ${featureBoxUnionCoverageLabel}% union`
     + ` · Last evaluation: ${lastEvaluation}`
     + ` · Decision: ${representation}`
