@@ -15,8 +15,12 @@ import {
   Cartesian3,
   Cartographic,
   Color,
+  Cesium3DTileStyle,
+  createGooglePhotorealistic3DTileset,
+  createOsmBuildingsAsync,
   createWorldTerrainAsync,
   HeightReference,
+  IonGeocodeProviderType,
   ImageryLayer,
   Ion,
   JulianDate,
@@ -86,6 +90,8 @@ appRoot.innerHTML = `
     <div id="renderEvaluationBody">
       <div class="render-evaluation-actions">
         <button id="baselineButton" type="button">Baseline</button>
+        <button id="photorealisticButton" type="button">Google Photo 3D</button>
+        <button id="estCgButton" type="button">Est CG World</button>
         <button id="estButton" type="button">Terrain Study</button>
         <button id="landCoverButton" type="button">Land Cover</button>
         <button id="estSurfaceButton" type="button">Est Surface Study</button>
@@ -137,7 +143,7 @@ const viewer = new Viewer('cesiumContainer', {
   animation: false,
   baseLayerPicker: false,
   fullscreenButton: false,
-  geocoder: false,
+  geocoder: IonGeocodeProviderType.GOOGLE,
   homeButton: false,
   infoBox: false,
   navigationHelpButton: false,
@@ -145,6 +151,28 @@ const viewer = new Viewer('cesiumContainer', {
   selectionIndicator: false,
   timeline: false,
 })
+
+const globalBuildings =
+  await createOsmBuildingsAsync({
+    enableShowOutline: false,
+  })
+
+globalBuildings.maximumScreenSpaceError = 8
+globalBuildings.cacheBytes = 1024 * 1024 * 1024
+globalBuildings.maximumCacheOverflowBytes = 512 * 1024 * 1024
+globalBuildings.progressiveResolutionHeightFraction = 0.3
+
+viewer.scene.primitives.add(globalBuildings)
+
+const photorealisticTiles =
+  await createGooglePhotorealistic3DTileset({
+    onlyUsingWithGoogleGeocoder: true,
+  })
+
+photorealisticTiles.show = false
+viewer.scene.primitives.add(photorealisticTiles)
+
+viewer.scene.globe.preloadSiblings = true
 
 viewer.scene.backgroundColor = Color.BLACK
 viewer.scene.globe.enableLighting = true
@@ -154,10 +182,15 @@ viewer.scene.globe.dynamicAtmosphereLighting = true
 
 viewer.camera.setView({
   destination: Cartesian3.fromDegrees(
-    -119.6,
-    37.75,
-    12_000_000,
+    -77.0365,
+    38.8977,
+    1_500,
   ),
+  orientation: {
+    heading: 0,
+    pitch: -0.65,
+    roll: 0,
+  },
 })
 
 function requireElement<T extends HTMLElement>(
@@ -174,6 +207,12 @@ function requireElement<T extends HTMLElement>(
 
 const baselineButton =
   requireElement<HTMLButtonElement>('#baselineButton')
+
+const photorealisticButton =
+  requireElement<HTMLButtonElement>('#photorealisticButton')
+
+const estCgButton =
+  requireElement<HTMLButtonElement>('#estCgButton')
 
 const estButton =
   requireElement<HTMLButtonElement>('#estButton')
@@ -976,6 +1015,10 @@ function applyInspectionLighting(): void {
 function applyBaseline(): void {
   disableAutomaticScale()
   setLocalGeometryVisible(false)
+  photorealisticTiles.show = false
+  globalBuildings.show = true
+  globalBuildings.style = undefined
+  viewer.scene.globe.show = true
   viewer.scene.globe.material = undefined
   imageryLayer.show = true
   landCoverLayer.show = false
@@ -993,6 +1036,43 @@ function applyBaseline(): void {
   imageryLayer.gamma = 1
 
   lookLabel.textContent = 'Baseline'
+}
+
+function applyPhotorealistic(): void {
+  disableAutomaticScale()
+  setLocalGeometryVisible(false)
+
+  photorealisticTiles.show = true
+  globalBuildings.show = false
+  viewer.scene.globe.show = false
+
+  lookLabel.textContent = 'Google Photorealistic 3D'
+}
+
+function applyEstCgWorld(): void {
+  disableAutomaticScale()
+  setLocalGeometryVisible(false)
+
+  photorealisticTiles.show = false
+  globalBuildings.show = true
+  globalBuildings.style = new Cesium3DTileStyle({
+    color: "color('#d8cbb7')",
+  })
+
+  viewer.scene.globe.show = true
+  viewer.scene.globe.material = terrainMaterial
+
+  imageryLayer.show = false
+  landCoverLayer.show = false
+  surfaceLayer.show = false
+  surfaceTmsLayer.show = false
+  visualSurfaceTmsLayer.show = false
+  continuousSurfaceTmsLayer.show = false
+
+  viewer.scene.globe.lambertDiffuseMultiplier = 1.1
+  viewer.scene.globe.atmosphereLightIntensity = 12
+
+  lookLabel.textContent = 'Est CG World'
 }
 
 function applyEstLook(): void {
@@ -1188,6 +1268,14 @@ daylightButton.addEventListener(
 )
 
 baselineButton.addEventListener('click', applyBaseline)
+photorealisticButton.addEventListener(
+  'click',
+  applyPhotorealistic,
+)
+estCgButton.addEventListener(
+  'click',
+  applyEstCgWorld,
+)
 estButton.addEventListener('click', applyEstLook)
 landCoverButton.addEventListener('click', applyLandCover)
 
